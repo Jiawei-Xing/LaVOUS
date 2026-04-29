@@ -405,6 +405,9 @@ def plot_circular_tree(root, outer, output_path):
     for ax in (ax1, ax2):
         ax.set_aspect("equal")
 
+    tree_linewidth = 3
+    colorbar_label_fontsize = 14
+
     def draw_tree(ax, node, val_func, cmap, norm):
         if not node.children:
             return
@@ -419,7 +422,7 @@ def plot_circular_tree(root, outer, output_path):
                 t_min, t_max = t_max, t_min + 2 * np.pi
             arc_t = np.linspace(t_min, t_max, max(20, int(abs(t_max - t_min) * 50)))
             ax.plot(cr * np.cos(arc_t), cr * np.sin(arc_t),
-                    color=col_parent, linewidth=0.8, solid_capstyle='round')
+                    color=col_parent, linewidth=tree_linewidth, solid_capstyle='round')
 
         # Radial branches with gradient
         for child in node.children:
@@ -435,7 +438,7 @@ def plot_circular_tree(root, outer, output_path):
                 y0 = r_vals[i] * np.sin(child.theta)
                 x1 = r_vals[i + 1] * np.cos(child.theta)
                 y1 = r_vals[i + 1] * np.sin(child.theta)
-                ax.plot([x0, x1], [y0, y1], color=col, linewidth=0.8,
+                ax.plot([x0, x1], [y0, y1], color=col, linewidth=tree_linewidth,
                         solid_capstyle='butt')
 
             draw_tree(ax, child, val_func, cmap, norm)
@@ -465,7 +468,7 @@ def plot_circular_tree(root, outer, output_path):
                 x1 = (bar_base + bar_len) * np.cos(leaf.theta)
                 y1 = (bar_base + bar_len) * np.sin(leaf.theta)
                 ax2.plot([x0, x1], [y0, y1],
-                         color=cmap_rc(norm_rc(rc_norm)), lw=1.5,
+                         color=cmap_rc(norm_rc(rc_norm)), linewidth=tree_linewidth,
                          solid_capstyle='butt')
 
     margin = max_r * 1.25 if outer else max_r * 1.10
@@ -477,11 +480,11 @@ def plot_circular_tree(root, outer, output_path):
 
     sm_var = plt.cm.ScalarMappable(norm=norm_var, cmap=cmap_var)
     cbar1 = fig.colorbar(sm_var, ax=ax1, orientation='horizontal', fraction=0.046, pad=0.08, shrink=0.7)
-    cbar1.ax.set_title("Variance", loc='left', fontsize=10)
+    cbar1.ax.set_title("Variance", loc='left', fontsize=colorbar_label_fontsize)
 
     sm_mu = plt.cm.ScalarMappable(norm=norm_mu, cmap=cmap_mu)
     cbar2 = fig.colorbar(sm_mu, ax=ax2, orientation='horizontal', fraction=0.046, pad=0.08, shrink=0.7)
-    cbar2.ax.set_title("Value", loc='left', fontsize=10)
+    cbar2.ax.set_title("Latent", loc='left', fontsize=colorbar_label_fontsize)
 
     plt.savefig(output_path, dpi=200, bbox_inches='tight')
     plt.close()

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "SingleCellStochastics"
 version = "0.1.0"
-description = "An OU-Poisson model for metastatic cancer gene expression changes along a cell lineage tree."
+description = "LAVOUS: lineage-aware variational OU/BM models for single-cell RNA-seq count data."
 authors = [
     {name = "Jiawei Xing", email = "xing@cshl.edu"},
     {name = "Stephen Staklinski", email = "staklins@cshl.edu"}
@@ -28,11 +28,17 @@ dependencies = [
 readme = "README.md"
 requires-python = ">=3.7"
 license = {text = "MIT"}
+keywords = ["single-cell", "lineage", "ornstein-uhlenbeck", "brownian-motion", "variational-inference"]
 
 [project.urls]
 "Homepage" = "https://github.com/Jiawei-Xing/SingleCellStochastics"
 
 [project.scripts]
+lavous-heritability = "singlecellstochastics.plasticity:run_plasticity_test"
+lavous-diff = "singlecellstochastics.ou_diff:run_diff_test"
+lavous-calibrate = "singlecellstochastics.calibrate:run_calibrate"
+lavous-reconstruct = "singlecellstochastics.reconstruct:run_reconst"
+lavous-simulate = "singlecellstochastics.stochas_sim:run_stochas_sim"
 run-plasticity-test = "singlecellstochastics.plasticity:run_plasticity_test"
 run-selection-test = "singlecellstochastics.selection:run_selection_test"
 run-diff-test = "singlecellstochastics.ou_diff:run_diff_test"

@@ -172,7 +172,10 @@ def get_latent_gene_expression_at_tips(
     Args:
         tree: A Biopython `Tree` object.
         test_regime (str, optional): Regime label for which to apply the test OU process.
-        root_expr (float, optional): Expression value at the root node (and the OU attractor of the background regime).
+        root_expr (float, optional): Background-regime expression value. In
+            stationary mode, the root is sampled from the OU stationary
+            distribution centered at this value; in fixed mode, this value is
+            used as the root expression.
         optim (float, optional): Optimal expression value (theta) for the OU process.
         alpha (float, optional): Selective strength parameter for the OU process.
         sigma (float, optional): Variance parameter for the OU/BM process.
@@ -295,7 +298,9 @@ def simulate(
     Args:
         tree (Tree): A Biopython `Tree` object with assigned regimes.
         n_genes (int): Number of genes to simulate.
-        root_expr (float): Expression value at the root node.
+        root_expr (float): Background-regime expression value. In stationary
+            mode, the root is sampled around this value; in fixed mode, this
+            value is used as the root expression.
         test_regime (str): Regime label for which to apply the test OU process.
         optim (float, optional): Optimal expression value (theta) for the OU process.
         alpha (float, optional): Selective strength parameter for the OU process.
@@ -507,6 +512,9 @@ def plot_sim_tree(tree, output_path, test_regime=None, outer=True):
     fig, ax = plt.subplots(1, 1, figsize=(10, 10), dpi=200)
     ax.set_aspect("equal")
 
+    tree_linewidth = 3
+    colorbar_label_fontsize = 14
+
     def draw_tree(node):
         if not node.clades:
             return
@@ -520,7 +528,7 @@ def plot_sim_tree(tree, output_path, test_regime=None, outer=True):
                 t_min, t_max = t_max, t_min + 2 * np.pi
             arc_t = np.linspace(t_min, t_max, max(20, int(abs(t_max - t_min) * 50)))
             ax.plot(cr * np.cos(arc_t), cr * np.sin(arc_t),
-                    color=col_parent, linewidth=0.8, solid_capstyle='round')
+                    color=col_parent, linewidth=tree_linewidth, solid_capstyle='round')
 
         for child in node.clades:
             col_child = cmap_mu(norm_mu(child.expr))
@@ -535,7 +543,7 @@ def plot_sim_tree(tree, output_path, test_regime=None, outer=True):
                 y0 = r_vals[i] * np.sin(child.theta_coord)
                 x1 = r_vals[i + 1] * np.cos(child.theta_coord)
                 y1 = r_vals[i + 1] * np.sin(child.theta_coord)
-                ax.plot([x0, x1], [y0, y1], color=col, linewidth=0.8,
+                ax.plot([x0, x1], [y0, y1], color=col, linewidth=tree_linewidth,
                         solid_capstyle='butt')
             draw_tree(child)
 
@@ -557,7 +565,7 @@ def plot_sim_tree(tree, output_path, test_regime=None, outer=True):
                 x1 = (bar_base + bar_len) * np.cos(leaf.theta_coord)
                 y1 = (bar_base + bar_len) * np.sin(leaf.theta_coord)
                 ax.plot([x0, x1], [y0, y1],
-                        color=cmap_rc(norm_rc(rc)), lw=1.5,
+                        color=cmap_rc(norm_rc(rc)), linewidth=tree_linewidth,
                         solid_capstyle='butt')
         margin = max_r * 1.25
     else:
@@ -570,7 +578,7 @@ def plot_sim_tree(tree, output_path, test_regime=None, outer=True):
     sm_mu = plt.cm.ScalarMappable(norm=norm_mu, cmap=cmap_mu)
     cbar = fig.colorbar(sm_mu, ax=ax, orientation='horizontal',
                         fraction=0.046, pad=0.08, shrink=0.7)
-    cbar.ax.set_title("Value", loc='left', fontsize=10)
+    cbar.ax.set_title("Latent", loc='left', fontsize=colorbar_label_fontsize)
 
     os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
     plt.savefig(output_path, dpi=200, bbox_inches='tight')
@@ -583,7 +591,7 @@ def run_stochas_sim():
     parser.add_argument("--tree", type=str, required=True, help="File path of input tree")
     parser.add_argument("--regime", type=str, required=True, help="File path of input regime")
     parser.add_argument("--test", type=str, required=False, default=None, help="Regime for testing (OU)")
-    parser.add_argument("--root", type=int, required=True, help="Starting expression at the root")
+    parser.add_argument("--background", type=float, required=True, help="Background-regime expression value. In stationary root mode, the root is sampled around this value; in fixed root mode, this value is used as the root expression.")
     parser.add_argument("--n_genes", type=int, default=500, help="Number of genes to simulate")
     parser.add_argument("--sigma", type=float, required=True, help="Variance for BM or OU")
     parser.add_argument("--optim", type=int, default=None, help="Optimal expression for OU")
@@ -593,7 +601,7 @@ def run_stochas_sim():
     parser.add_argument("--dispersion", type=float, default=None, help="Dispersion for negative binomial sampling (default: no sampling; 0: Poisson)")
     parser.add_argument("--plot", action="store_true", help="Whether to plot the gene expression evolution (default: False)")
     parser.add_argument("--bg", type=str, default="OU", help="OU or BM for background simulation")
-    parser.add_argument("--root_mode", type=str, default="stationary", choices=["stationary", "fixed"], help="Root sampling: 'stationary' draws from N(root, sigma^2/(2*alpha)) of the background regime (matches reconstructor prior); 'fixed' uses --root verbatim. BM background only supports 'fixed'.")
+    parser.add_argument("--root_mode", type=str, default="stationary", choices=["stationary", "fixed"], help="Root sampling: 'stationary' draws from N(background, sigma^2/(2*alpha)) of the background regime (matches reconstructor prior); 'fixed' uses --background verbatim. BM background only supports 'fixed'.")
     parser.add_argument("--tree_plot", action="store_true", help="Plot simulated expression on circular tree (uses last gene)")
     args = parser.parse_args()
 
@@ -601,7 +609,7 @@ def run_stochas_sim():
     tree = read_tree(args.tree)
     tree = assign_nodes_to_regimes(tree, args.regime)
 
-    plots, cells, read_counts = simulate(tree, args.n_genes, args.root, args.test, args.optim, args.alpha, args.sigma, args.dispersion, args.bg, args.root_mode)
+    plots, cells, read_counts = simulate(tree, args.n_genes, args.background, args.test, args.optim, args.alpha, args.sigma, args.dispersion, args.bg, args.root_mode)
     if args.plot:
         plot(plots, args.n_genes, args.out, args.label)
     write_read_counts(read_counts, cells, args.n_genes, args.out, args.label)
