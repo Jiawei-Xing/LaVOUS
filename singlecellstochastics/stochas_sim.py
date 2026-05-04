@@ -187,11 +187,12 @@ def get_latent_gene_expression_at_tips(
     Returns:
         None
     """
+    if root_mode == "stationary" and background_model == "BM":
+        root_mode = "fixed"
+
     if root_mode == "fixed":
         sampled_root = root_expr
     elif root_mode == "stationary":
-        if background_model != "OU":
-            raise ValueError("root_mode='stationary' requires background_model='OU' (BM has no stationary distribution).")
         std = np.sqrt(np.maximum(sigma**2 / (2 * alpha), 1e-10))
         sampled_root = float(np.random.normal(loc=root_expr, scale=std))
     else:
@@ -318,7 +319,8 @@ def simulate(
     read_counts_latent = {}
     plots = []
     for gene_idx in range(n_genes):
-        print(f"Simulating gene {gene_idx+1}/{n_genes}...", flush=True)
+        if (gene_idx + 1) % 100 == 0 or gene_idx == 0 or gene_idx + 1 == n_genes:
+            print(f"Simulating gene {gene_idx+1}/{n_genes}...", flush=True)
         plot = []
 
         # Clean the tree from any previous genes

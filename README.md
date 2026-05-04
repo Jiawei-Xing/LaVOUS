@@ -57,7 +57,7 @@ preprocessing.
 
 ```bash
 lavous-heritability \
-  --tree examples/input_data/tree.nwk \
+  --tree examples/input_data/tree_demo.nwk \
   --expression examples/input_data/readcounts_demo.tsv \
   --outfile examples/output_results/heritability.tsv
 ```
@@ -70,9 +70,9 @@ parameters.
 
 ```bash
 lavous-diff \
-  --tree examples/input_data/tree.nwk \
+  --tree examples/input_data/tree_demo.nwk \
   --expression examples/input_data/readcounts_demo.tsv \
-  --regime examples/input_data/regime.csv \
+  --regime examples/input_data/regime_demo.csv \
   --null 0 \
   --outdir examples/output_results \
   --prefix diff
@@ -96,7 +96,7 @@ calibration compares simulated and observed `(h0_loss - h1_loss)`.
 
 ### Empirical-Null Calibration
 
-After running the differential-expression test, calibrate p-values from null
+After running the differential-expression test, optionally calibrate p-values from null
 simulations:
 
 ```bash
@@ -112,12 +112,12 @@ because it refits the LRT to `N` simulated datasets per gene.
 
 ```bash
 lavous-reconstruct \
-  --tree examples/input_data/tree.nwk \
+  --tree examples/input_data/tree_demo.nwk \
   --q_params examples/output_results/diff_h1_q-mean-std_0.tsv \
   --read_counts examples/input_data/readcounts_demo.tsv \
   --gene Gene_2 \
   --model ou \
-  --regime examples/input_data/regime.csv \
+  --regime examples/input_data/regime_demo.csv \
   --ou examples/output_results/diff_model-params.tsv \
   --out_tsv examples/output_results/history_gene2.tsv \
   --out_fig examples/output_results/history_gene2.png
@@ -135,8 +135,8 @@ In addition, to enerate a small simulated read-count matrix from a tree and regi
 
 ```bash
 lavous-simulate \
-  --tree examples/input_data/tree.nwk \
-  --regime examples/input_data/regime.csv \
+  --tree examples/input_data/tree_demo.nwk \
+  --regime examples/input_data/regime_demo.csv \
   --test 1 \
   --background 1 \
   --n_genes 5 \

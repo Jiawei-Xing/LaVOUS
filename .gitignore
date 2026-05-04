@@ -1,5 +1,7 @@
 wandb
 test*
+archive*
+log*
 build
 *.egg-info
 dist
@@ -11,9 +13,6 @@ __pycache__
 .env
 *.err
 *.out
-other
-*.sh
-real_data
-infer_params
 CLAUDE.md
+AGENTS.md
 .*

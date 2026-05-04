@@ -430,18 +430,16 @@ def ou_neg_log_lik_torch_kkt(
 
     # theta = (W.T @ V^-1 @ W)^-1 @ W.T @ V^-1 @ expr
     # cholesky: theta = (S.T @ S)^-1 @ S.T @ y, with S = L^{-1} W, y = L^{-1} expr.
-    # Use solve_triangular here (not L_inv @ ...) for tighter numerical stability
-    # of the GLS solve that feeds lstsq.
+    # Use solve_triangular here (not L_inv @ ...) for tighter numerical stability.
     S = torch.linalg.solve_triangular(L, W, upper=False)
     y = torch.linalg.solve_triangular(L, expr_batch.unsqueeze(-1), upper=False)
-    # Use magma backend on CUDA to avoid cusolver SVD failure on large matrices.
-    if S.is_cuda:
-        prev_lib = torch.backends.cuda.preferred_linalg_library()
-        torch.backends.cuda.preferred_linalg_library("magma")
-        theta = torch.linalg.lstsq(S, y).solution  # (batch, N_sim, n_regimes, 1)
-        torch.backends.cuda.preferred_linalg_library(prev_lib)
-    else:
-        theta = torch.linalg.lstsq(S, y).solution  # (batch, N_sim, n_regimes, 1)
+    # Solve normal equations (S.T @ S) theta = S.T @ y. n_regimes is small (<=3),
+    # so this is cheap and avoids torch.linalg.lstsq on CUDA — that path triggers
+    # illegal-memory-access in magma's batched lstsq across multi-batch runs.
+    StS = S.transpose(-1, -2) @ S      # (batch, N_sim, n_regimes, n_regimes), SPD
+    Sty = S.transpose(-1, -2) @ y      # (batch, N_sim, n_regimes, 1)
+    L_StS = torch.linalg.cholesky(StS)
+    theta = torch.cholesky_solve(Sty, L_StS)  # (batch, N_sim, n_regimes, 1)
     if TRACE.enabled:
         nan_t, inf_t = nan_inf_count(theta)
         TRACE.write("theta_n_nan", nan_t)

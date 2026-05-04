@@ -66,6 +66,13 @@ def parse_args():
                    help="(--sim_all only) Drop the top fraction of genes by observed lrt "
                         "from the H0 parameter pool to reduce contamination from true "
                         "positives. Default 0 (no filter); typical 0.05-0.2.")
+    p.add_argument("--gpd_tail", action="store_true",
+                   help="(--sim_all only) Fit a Generalized Pareto Distribution to the "
+                        "upper tail of null LRs and use it to extrapolate small p-values. "
+                        "Cuts required sims ~5-10x for the same effective resolution.")
+    p.add_argument("--gpd_quantile", type=float, default=0.90,
+                   help="Quantile threshold above which to fit GPD (default 0.90). "
+                        "Lower quantile uses more excesses but assumes Pareto regime starts earlier.")
     return p.parse_args()
 
 
@@ -133,6 +140,43 @@ def _h0_params_from_tsv(chi_df, pool_top_drop=0.0):
 
     h0 = np.stack([log_r, log_alpha, h0_sigma, h0_theta], axis=1)
     return h0[valid], valid
+
+
+def _fit_gpd_tail(null_LRs, quantile):
+    """Fit a GPD to the upper tail of null_LRs above the given quantile.
+
+    Returns (threshold, shape, scale, n_tail) on success, else None.
+    """
+    from scipy.stats import genpareto
+    threshold = float(np.quantile(null_LRs, quantile))
+    excesses = null_LRs[null_LRs > threshold] - threshold
+    n_tail = len(excesses)
+    if n_tail < 50:
+        logger.warning(
+            f"GPD tail: only {n_tail} excesses above q={quantile}; "
+            f"falling back to pure empirical p (need >=50)."
+        )
+        return None
+    try:
+        shape, _, scale = genpareto.fit(excesses, floc=0)
+    except Exception as e:
+        logger.warning(f"GPD fit failed ({e}); falling back to pure empirical p.")
+        return None
+    logger.info(
+        f"GPD tail fit: q={quantile} threshold={threshold:.3f}, "
+        f"n_tail={n_tail}, shape={shape:.3f}, scale={scale:.3f}"
+    )
+    return threshold, shape, scale, n_tail
+
+
+def _empirical_or_gpd_p(obs, null_LRs, n_valid, gpd_fit):
+    """Empirical p; if obs sits above the GPD threshold, use GPD survival."""
+    if gpd_fit is None or obs <= gpd_fit[0]:
+        return (np.sum(null_LRs >= obs) + 1) / (n_valid + 1)
+    from scipy.stats import genpareto
+    threshold, shape, scale, n_tail = gpd_fit
+    sf = float(genpareto.sf(obs - threshold, shape, loc=0, scale=scale))
+    return (n_tail / n_valid) * sf
 
 
 def _build_lrt_kwargs(meta, device, dtype):
@@ -225,13 +269,17 @@ def run_calibrate():
 
     # === sim_all mode ===
     if args.sim_all:
-        null_LRs = None
+        # Load any existing (possibly partial) cache for resume
+        cached_LRs = np.empty(0)
         if args.cache and os.path.exists(args.cache):
             with open(args.cache, "rb") as f:
-                null_LRs = pickle.load(f)
-            logger.info(f"Loaded cached null LRs from {args.cache}")
+                cached_LRs = pickle.load(f)
+            logger.info(f"Loaded {len(cached_LRs)} cached null LRs from {args.cache}")
 
-        if null_LRs is None:
+        if len(cached_LRs) >= args.sim_all:
+            null_LRs = cached_LRs[: args.sim_all]
+            logger.info(f"Cache has {len(cached_LRs)} >= sim_all={args.sim_all}; skipping simulation.")
+        else:
             ou_params, _ = _h0_params_from_tsv(chi_df, pool_top_drop=args.pool_top_drop)
             logger.info(f"Simulating {args.sim_all} null datasets from {len(ou_params)} H0 params...")
             x_sim = simulate_null_all(
@@ -240,8 +288,12 @@ def run_calibrate():
             )
             x_sim = [np.expand_dims(x, axis=1) for x in x_sim]
 
-            chunks = []
-            for s in range(0, args.sim_all, args.batch):
+            # Resume aligned to batch boundary (drops at most batch-1 cached sims).
+            done = (len(cached_LRs) // args.batch) * args.batch
+            chunks = [cached_LRs[:done]] if done > 0 else []
+            if done > 0:
+                logger.info(f"Resuming from sim {done} (cache truncated to batch={args.batch} boundary).")
+            for s in range(done, args.sim_all, args.batch):
                 e = min(s + args.batch, args.sim_all)
                 logger.info(f"  Fitting LRT on sims {s}:{e}...")
                 chunk = [x[s:e] for x in x_sim]
@@ -250,21 +302,42 @@ def run_calibrate():
                     chunk, gene_names=gn, batch_start=s, **lrt_kwargs
                 )
                 chunks.append(h0_loss_sim[:, 0] - h1_loss_sim[:, 0])
+                if args.cache:
+                    tmp = args.cache + ".tmp"
+                    with open(tmp, "wb") as f:
+                        pickle.dump(np.concatenate(chunks), f)
+                    os.replace(tmp, args.cache)
+                    logger.info(f"  Checkpointed {sum(len(c) for c in chunks)} sims to {args.cache}")
             null_LRs = np.concatenate(chunks)
-            if args.cache:
-                with open(args.cache, "wb") as f:
-                    pickle.dump(null_LRs, f)
-                logger.info(f"Cached null LRs to {args.cache}")
 
-        # Compute empirical p-values
+        # Compute empirical p-values (drop non-finite null sims from denominator)
+        finite_mask = np.isfinite(null_LRs)
+        n_valid_sims = int(finite_mask.sum())
+        n_total_sims = len(null_LRs)
+        if n_valid_sims < n_total_sims:
+            logger.warning(
+                f"Excluded {n_total_sims - n_valid_sims}/{n_total_sims} null sims "
+                f"with non-finite LR; using {n_valid_sims} valid sims for p-values."
+            )
+        else:
+            logger.info(f"All {n_total_sims} null sims are finite.")
+        null_LRs_finite = null_LRs[finite_mask]
+
+        gpd_fit = _fit_gpd_tail(null_LRs_finite, args.gpd_quantile) if args.gpd_tail else None
+
         results_emp = {}
+        n_tail_used = 0
         for i, row in chi_df.iterrows():
             obs_delta_nll = delta_nll_obs[i]
-            if not np.isfinite(obs_delta_nll):
+            if not np.isfinite(obs_delta_nll) or n_valid_sims == 0:
                 p_emp = np.nan
             else:
-                p_emp = (np.sum(null_LRs >= obs_delta_nll) + 1) / (len(null_LRs) + 1)
+                if gpd_fit is not None and obs_delta_nll > gpd_fit[0]:
+                    n_tail_used += 1
+                p_emp = _empirical_or_gpd_p(obs_delta_nll, null_LRs_finite, n_valid_sims, gpd_fit)
             results_emp[i] = list(row.values[: -3]) + [p_emp]
+        if gpd_fit is not None:
+            logger.info(f"GPD tail used for {n_tail_used}/{len(chi_df)} genes.")
 
         out_path = os.path.join(outdir, f"{prefix}_empirical-all.tsv")
         output_results(results_emp, out_path, regimes)
@@ -308,13 +381,27 @@ def run_calibrate():
         results_emp = {}
         # Map valid index back to row index
         valid_idx = np.flatnonzero(valid)
+        n_total_sims_each = null_LRs_each.shape[1]
+        per_gene_valid = np.isfinite(null_LRs_each).sum(axis=1)
+        n_genes_partial = int((per_gene_valid < n_total_sims_each).sum())
+        if n_genes_partial > 0:
+            logger.warning(
+                f"{n_genes_partial}/{len(valid_idx)} genes had non-finite null sims; "
+                f"per-gene valid sim counts range "
+                f"[{int(per_gene_valid.min())}, {int(per_gene_valid.max())}] "
+                f"of {n_total_sims_each}."
+            )
+        else:
+            logger.info(f"All genes have all {n_total_sims_each} null sims finite.")
         for j, i in enumerate(valid_idx):
             obs_delta_nll = delta_nll_obs[i]
-            if not np.isfinite(obs_delta_nll):
+            null_row = null_LRs_each[j, :]
+            null_row_finite = null_row[np.isfinite(null_row)]
+            n_valid = len(null_row_finite)
+            if not np.isfinite(obs_delta_nll) or n_valid == 0:
                 p_emp = np.nan
             else:
-                null_row = null_LRs_each[j, :]
-                p_emp = (np.sum(null_row >= obs_delta_nll) + 1) / (len(null_row) + 1)
+                p_emp = (np.sum(null_row_finite >= obs_delta_nll) + 1) / (n_valid + 1)
             results_emp[int(i)] = list(chi_df.iloc[i].values[: -3]) + [p_emp]
         # Genes excluded from valid pool keep p=NaN so output_results pushes them to end
         for i in np.flatnonzero(~valid):

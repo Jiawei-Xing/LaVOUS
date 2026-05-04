@@ -39,7 +39,7 @@ def parse_args():
     parser.add_argument("--iter", type=int, default=10000, help="Max optimization iterations (default: 10000)")
     parser.add_argument("--window", type=int, default=200, help="Convergence check window (default: 200)")
     parser.add_argument("--tol", type=float, default=1e-4, help="Convergence tolerance (default: 1e-4)")
-    parser.add_argument("--dtype", type=str, default="float64", choices=["float32", "float64"], help="Torch dtype (default: float64)")
+    parser.add_argument("--dtype", type=str, default="float32", choices=["float32", "float64"], help="Torch dtype (default: float32)")
 
     # Model
     parser.add_argument("--approx", type=str, default="softplus_MC", help="Likelihood approximation method (default: softplus_MC)")
@@ -270,7 +270,7 @@ def run_diff_test():
     elapsed = time.time() - start_time
     logger.info(f"Results saved to {output_dir}/{prefix}_chi-squared.tsv")
     logger.info(f"Model parameters saved to {output_dir}/{prefix}_model-params.tsv")
-    logger.info(f"For empirical-null calibration: run-calibrate --chi {output_dir}/{prefix}_chi-squared.tsv --sim_all <N>")
+    logger.info(f"For empirical-null calibration: lavous-calibrate --chi {output_dir}/{prefix}_chi-squared.tsv --sim_all <N>")
     logger.info(f"Total running time: {elapsed:.1f}s ({elapsed/60:.1f}min)")
 
 
