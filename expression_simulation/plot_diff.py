@@ -1,151 +1,77 @@
-import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib as mpl
-import matplotlib.patches as mpatches
-from pathlib import Path
+from sklearn.metrics import roc_curve, auc, precision_recall_curve, average_precision_score
 
-# ── Nature style ──────────────────────────────────────────────────────────
-mpl.rcParams.update({
-    "font.family": "sans-serif",
-    "font.sans-serif": ["Arial", "Helvetica", "DejaVu Sans"],
-    "font.size": 7,
-    "axes.titlesize": 8,
-    "axes.labelsize": 7,
-    "xtick.labelsize": 6,
-    "ytick.labelsize": 6,
-    "legend.fontsize": 6,
-    "figure.dpi": 300,
-    "savefig.dpi": 300,
-    "axes.linewidth": 0.5,
-    "xtick.major.width": 0.5,
-    "ytick.major.width": 0.5,
-    "xtick.major.size": 2,
-    "ytick.major.size": 2,
-    "lines.linewidth": 0.8,
-    "pdf.fonttype": 42,
-    "ps.fonttype": 42,
-})
 
-# ── Config ────────────────────────────────────────────────────────────────
-PLASTICITY_DIR = Path("diff")
-FIG_DIR = Path("diff")
-FIG_DIR.mkdir(exist_ok=True)
+def load_scores(oup_file, egx_file):
+    """Load raw ranking scores for each method (higher = more DE-like)."""
+    df_oup = pd.read_csv(oup_file, sep="\t")
+    df_egx = pd.read_csv(egx_file, sep=",")
 
-# Map scenarios: (OU_label, BM_label, Display Name)
-# I merged your two dictionaries to match up the corresponding scenarios
-SCENARIO_PAIRS = [
-    ("C", "A", "Baseline"),
-    ("B_diff", "B", "High θ"),
-    ("C_diff", "A", "Large θ difference"),
-    ("D_diff", "D", "High σ"),
-    ("F_diff", "F", "Weak α"),
-    ("I_diff", "I", "Weak r⁻¹"),
-    ("J_diff", "J", "No r (Poisson)")
+    # OUP: LRT statistic
+    score_oup = df_oup["lrt"].values
+
+    # EGX: -log10(p), one row per gene (paired theta0/theta1 rows; p is on every row)
+    p_egx = np.maximum(df_egx["ou2_vs_ou1_pvalue"].iloc[::2].values, 1e-100)
+    score_egx = -np.log10(p_egx)
+
+    return score_oup, score_egx
+
+
+def plot_roc_curve(ax, oup_neg, oup_pos, egx_neg, egx_pos, title=None):
+    s_oup_neg, s_egx_neg, = load_scores(oup_neg, egx_neg)
+    s_oup_pos, s_egx_pos, = load_scores(oup_pos, egx_pos)
+
+    n_neg = len(s_oup_neg)
+    n_pos = len(s_oup_pos)
+    truth = np.array([False] * n_neg + [True] * n_pos)
+
+    for scores_neg, scores_pos, label, color in [
+        (s_egx_neg, s_egx_pos, "EvoGeneX", "tab:orange"),
+        (s_oup_neg, s_oup_pos, "LaVOUS", "tab:green")
+    ]:
+        p = np.concatenate((scores_neg, scores_pos))
+        fpr, tpr, _ = roc_curve(truth, p)
+        roc_auc = auc(fpr, tpr)
+        ax.plot(fpr, tpr, lw=1.5, color=color, label=f"{label} {roc_auc:.3f}")
+
+    ax.plot([0, 1], [0, 1], color="gray", lw=1, linestyle="--")
+    ax.set_xlim([0.0, 1.0])
+    ax.set_ylim([0.0, 1.0])
+    if title:
+        ax.set_title(title)
+    # Reorder legend: LaVOUS, EvoGeneX, SCOUT
+    handles, labels = ax.get_legend_handles_labels()
+    order = [0, 1]
+    ax.legend([handles[i] for i in order], [labels[i] for i in order],
+              frameon=False, loc="lower right")
+
+
+# Define dataset pairs: (pos_label, neg_label)
+datasets = [
+    # Row 0
+    [("Theta1", "Base"), ("t3r50", "rL"), ("t3r0", "r0")],
+    # Row 1
+    [("t5r5", "Base"), ("t5r50", "rL"), ("t5r0", "r0")],
+    # Row 2
+    [("t7r5", "Base"), ("t7r50", "rL"), ("t7r0", "r0")],
 ]
 
-# ── Load data ─────────────────────────────────────────────────────────────
-data_ou = {}
-data_bm = {}
+nrows = len(datasets)
+ncols = len(datasets[0])
+fig, axes = plt.subplots(nrows, ncols, figsize=(3 * ncols, 3 * nrows))
 
-for ou_label, bm_label, _ in SCENARIO_PAIRS:
-    f_ou = PLASTICITY_DIR / f"{ou_label}_chi-squared.tsv"
-    f_bm = PLASTICITY_DIR / f"{bm_label}_chi-squared.tsv"
-    if f_ou.exists():
-        data_ou[ou_label] = pd.read_csv(f_ou, sep="\t")
-    if f_bm.exists():
-        data_bm[bm_label] = pd.read_csv(f_bm, sep="\t")
+for i, row in enumerate(datasets):
+    for j, (pos, neg) in enumerate(row):
+        oup_neg = f"diff/diff_{neg}_chi-squared.tsv"
+        oup_pos = f"diff/diff_{pos}_chi-squared.tsv"
+        egx_neg = f"evogenex/egx_{neg}.csv"
+        egx_pos = f"evogenex/egx_{pos}.csv"
+        plot_roc_curve(axes[i, j], oup_neg, oup_pos, egx_neg, egx_pos)
 
-# Filter pairs where BOTH files exist to keep alignment, 
-# extracting matching names and datasets
-ou_data_list = []
-bm_data_list = []
-display_names = []
-
-for ou_label, bm_label, name in SCENARIO_PAIRS:
-    if ou_label in data_ou and bm_label in data_bm:
-        ou_data_list.append(data_ou[ou_label]["LR"].values)
-        bm_data_list.append(data_bm[bm_label]["LR"].values)
-        display_names.append(name)
-
-# ── Panel (b): compute TP/FP fractions ────────────────────────────────────
-def count_signif_true(result_file):
-    if not os.path.exists(result_file):
-        print(f"Missing: {result_file}")
-        return np.nan
-    df = pd.read_csv(result_file, sep="\t")
-    if "signif" not in df.columns:
-        raise ValueError(f"'signif' column not found in {result_file}")
-    signif = df["signif"]
-    if signif.dtype == bool:
-        return int(signif.sum())
-    return int(signif.astype(str).str.lower().eq("true").sum())
-
-tp_fp_rows = []
-for ou_label, null_label, name in SCENARIO_PAIRS:
-    f_ou = PLASTICITY_DIR / f"{ou_label}_chi-squared.tsv"
-    f_null = PLASTICITY_DIR / f"{null_label}_chi-squared.tsv"
-    tp = count_signif_true(str(f_ou)) / 500
-    fp = count_signif_true(str(f_null)) / 500
-    tp_fp_rows.append({"name": name, "TP": tp, "FP": fp})
-tp_fp_df = pd.DataFrame(tp_fp_rows)
-
-# ── Figure: 2 panels ─────────────────────────────────────────────────────
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7, 2.5))
-
-# — Panel (a): LR boxplots —
-positions = np.arange(len(display_names))
-width = 0.35
-
-bp_ou = ax1.boxplot(
-    ou_data_list, positions=positions - width/2, widths=width*0.8,
-    patch_artist=True, showfliers=False,
-    medianprops=dict(color="black", linewidth=0.8),
-    boxprops=dict(linewidth=0.5), whiskerprops=dict(linewidth=0.5), capprops=dict(linewidth=0.5)
-)
-for patch in bp_ou["boxes"]:
-    patch.set_facecolor("#1f77b4")
-    patch.set_alpha(0.7)
-
-bp_bm = ax1.boxplot(
-    bm_data_list, positions=positions + width/2, widths=width*0.8,
-    patch_artist=True, showfliers=False,
-    medianprops=dict(color="black", linewidth=0.8),
-    boxprops=dict(linewidth=0.5), whiskerprops=dict(linewidth=0.5), capprops=dict(linewidth=0.5)
-)
-for patch in bp_bm["boxes"]:
-    patch.set_facecolor("#ff7f0e")
-    patch.set_alpha(0.7)
-
-ax1.set_xticks(positions)
-ax1.set_xticklabels(display_names, rotation=45, ha="right")
-ax1.set_ylabel("LR statistic")
-ax1.axhline(3.841, color="red", ls="--", lw=0.5, label="χ²(1) p=0.05")
-ou_patch = mpatches.Patch(color='#1f77b4', alpha=0.7, label='OU 2θ')
-bm_patch = mpatches.Patch(color='#ff7f0e', alpha=0.7, label='OU 1θ')
-handles, labels = ax1.get_legend_handles_labels()
-ax1.legend(handles=[ou_patch, bm_patch] + handles, frameon=False, loc="upper right")
-ax1.set_title("a", fontweight="bold", loc="left")
-
-# — Panel (b): TP/FP bar chart —
-x = np.arange(len(tp_fp_df))
-bar_w = 0.35
-ax2.bar(x - bar_w/2, tp_fp_df["TP"], bar_w, color="#1f77b4", alpha=0.7, label="OU 2θ")
-ax2.bar(x + bar_w/2, tp_fp_df["FP"], bar_w, color="#ff7f0e", alpha=0.7, label="OU 1θ")
-for i, v in enumerate(tp_fp_df["TP"]):
-    if not np.isnan(v):
-        ax2.text(i - bar_w/2, v + 0.01, f"{v:.2f}", ha="center", va="bottom", fontsize=5)
-for i, v in enumerate(tp_fp_df["FP"]):
-    if not np.isnan(v):
-        ax2.text(i + bar_w/2, v + 0.01, f"{v:.2f}", ha="center", va="bottom", fontsize=5)
-ax2.set_xticks(x)
-ax2.set_xticklabels(tp_fp_df["name"], rotation=45, ha="right")
-ax2.set_ylabel("Fraction significant")
-ax2.set_ylim(0, 1)
-ax2.legend(frameon=False, loc="upper right")
-ax2.set_title("b", fontweight="bold", loc="left")
-
-plt.tight_layout()
-fig.savefig(FIG_DIR / "diff_sim_results_combined.png", bbox_inches="tight")
-plt.close(fig)
+fig.supxlabel("False Positive Rate")
+fig.supylabel("True Positive Rate")
+plt.tight_layout(pad=0.5)
+plt.savefig("diff_ROC.png", dpi=300, bbox_inches="tight")
+plt.show()
