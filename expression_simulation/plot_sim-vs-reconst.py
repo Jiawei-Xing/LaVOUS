@@ -27,6 +27,10 @@ SCENARIOS = ["r0", "t3r0", "t5r0", "t7r0"]
 COL_TITLES = [r"OU ($\theta_1$=1)", r"OU ($\theta_1$=3)",
               r"OU ($\theta_1$=5)", r"OU ($\theta_1$=7)"]
 ROW_TITLES = ["Simulation", "Reconstruction", "Uncertainty"]
+TITLE_FONTSIZE = 14
+ROW_LABEL_FONTSIZE = 13
+COLORBAR_LABEL_FONTSIZE = 12
+COLORBAR_TICK_FONTSIZE = 10
 # After re-centering, every scenario's root maps to 0 on the diverging cmap.
 ROOT_VALUE = 0.0
 
@@ -76,12 +80,12 @@ def layout_tree(newick_path):
 # ── Drawing functions ────────────────────────────────────────────
 
 def draw_colored_tree(ax, tree, val_dict, cmap, norm, max_r,
-                      outer_lens=None, branch_lw=2.0):
+                      outer_lens=None, outer_color_vals=None, branch_lw=2.0):
     """Draw tree with branches colored by val_dict.
 
     Optional outer ring bars at leaves: bar *length* scales with outer_lens
-    (e.g. read counts), bar *color* uses the leaf's val_dict entry on the
-    same cmap/norm as branches — keeps everything on one colorbar.
+    (e.g. read counts), while bar *color* uses outer_color_vals on the
+    same cmap/norm as branches. If omitted, bar color uses val_dict.
     """
     def draw(node):
         val = val_dict.get(node.name, np.nan)
@@ -117,12 +121,14 @@ def draw_colored_tree(ax, tree, val_dict, cmap, norm, max_r,
                 ln = outer_lens.get(leaf.name, 0)
                 if ln > 0:
                     bar_len = (ln / len_max) * (max_r * 0.20)
-                    leaf_val = val_dict.get(leaf.name, np.nan)
+                    color_vals = outer_color_vals if outer_color_vals is not None else val_dict
+                    leaf_val = color_vals.get(leaf.name, np.nan)
                     if np.isnan(leaf_val):
                         leaf_val = ROOT_VALUE
+                    bar_color = cmap(norm(leaf_val))
                     ax.plot([leaf.theta_coord] * 2,
                             [max_r * 1.02, max_r * 1.02 + bar_len],
-                            color=cmap(norm(leaf_val)),
+                            color=bar_color,
                             lw=2.5, solid_capstyle='butt')
 
     ax.axis('off')
@@ -193,7 +199,7 @@ def main():
 
     # ── Load all scenarios ──
     data = {}
-    all_sim, all_rc, all_mu, all_var = [], [], [], []
+    all_sim, all_mu, all_var = [], [], []
 
     for label in SCENARIOS:
         try:
@@ -204,7 +210,6 @@ def main():
         data[label] = d
         if d['sim_dict'] is not None:
             all_sim.extend(d['sim_dict'].values())
-        all_rc.extend(d['leaf_rc'].values())
         all_mu.extend(d['mu_dict'].values())
         all_var.extend(d['var_dict'].values())
 
@@ -254,7 +259,8 @@ def main():
         tree2, _, leaves2, max_r2 = layout_tree(args.tree)
         draw_colored_tree(axes[1, j], tree2, d['mu_dict'],
                           cmap_expr, norm_expr, max_r2,
-                          outer_lens=d['leaf_rc'])
+                          outer_lens=d['leaf_rc'],
+                          outer_color_vals=d['sim_dict'])
 
         # Row 2: Uncertainty — colored tree, no outer ring
         tree3, _, leaves3, max_r3 = layout_tree(args.tree)
@@ -264,34 +270,34 @@ def main():
     # ── Column titles ──
     for j, label in enumerate(available):
         idx = SCENARIOS.index(label)
-        axes[0, j].set_title(COL_TITLES[idx], fontsize=10, fontweight='bold',
-                             pad=10)
+        axes[0, j].set_title(COL_TITLES[idx], fontsize=TITLE_FONTSIZE, fontweight='bold',
+                             pad=12)
 
     # ── Row labels ──
     fig.canvas.draw()
     for i in range(3):
         bbox = axes[i, 0].get_position()
         fig.text(0.015, (bbox.y0 + bbox.y1) / 2, ROW_TITLES[i],
-                 va='center', ha='center', fontsize=10, fontweight='bold',
+                 va='center', ha='center', fontsize=ROW_LABEL_FONTSIZE, fontweight='bold',
                  rotation=90)
 
     fig.subplots_adjust(left=0.05, right=0.92, bottom=0.06, top=0.94,
                         wspace=0.02, hspace=0.05)
 
     # ── Colorbars ──
-    # Expression (rows 0–1)
+    # Expression (rows 0-1)
     cax1 = fig.add_axes([0.94, 0.36, 0.013, 0.52])
     sm1 = plt.cm.ScalarMappable(norm=norm_expr, cmap=cmap_expr)
     cb1 = fig.colorbar(sm1, cax=cax1)
-    cb1.set_label(r"Expression $-$ simulated root", fontsize=9)
-    cb1.ax.tick_params(labelsize=8)
+    cb1.set_label(r"Expression $-$ simulated root", fontsize=COLORBAR_LABEL_FONTSIZE)
+    cb1.ax.tick_params(labelsize=COLORBAR_TICK_FONTSIZE)
 
     # Variance (row 2)
     cax2 = fig.add_axes([0.94, 0.06, 0.013, 0.22])
     sm2 = plt.cm.ScalarMappable(norm=norm_var, cmap=cmap_var)
     cb2 = fig.colorbar(sm2, cax=cax2)
-    cb2.set_label("Variance", fontsize=9)
-    cb2.ax.tick_params(labelsize=8)
+    cb2.set_label("Variance", fontsize=COLORBAR_LABEL_FONTSIZE)
+    cb2.ax.tick_params(labelsize=COLORBAR_TICK_FONTSIZE)
 
     out_path = os.path.join(args.reconstdir, "comparison.png")
     fig.savefig(out_path, dpi=300, bbox_inches='tight')
