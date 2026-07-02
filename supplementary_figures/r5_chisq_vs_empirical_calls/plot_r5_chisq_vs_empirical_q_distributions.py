@@ -2,9 +2,9 @@
 #!/usr/bin/env python3
 """Supplementary figure: r=5 q-value distributions by calibration.
 
-This script reads existing differential-test and empirical-calibration outputs
-and writes derived files next to this script. It does not modify original
-simulation or result files.
+This script reads existing differential-test outputs and copied
+empirical-calibration outputs, then writes derived files next to this script. It
+does not modify original simulation or result files.
 """
 
 from pathlib import Path
@@ -21,7 +21,7 @@ import pandas as pd
 THIS_DIR = Path(__file__).resolve().parent
 REPO_ROOT = THIS_DIR.parents[1]
 DIFF_DIR = REPO_ROOT / "expression_simulation" / "diff"
-CALIB_DIR = DIFF_DIR / "test" / "calibrate_base_h0_empirical_10k"
+CALIB_DIR = THIS_DIR / "calibrate_base_h0_empirical_10k"
 
 SCENARIOS = [
     {"label": "Base", "title": r"$\theta_1=1$ (null)", "theta1": 1},
@@ -155,7 +155,7 @@ def write_caption(summary):
 
 Supplementary Fig. X. Example r = 5 simulation q-value distributions under chi-square and empirical-null calibration. Panels A-D show per-gene q values for theta1 = 1, 3, 5, and 7 simulations, with genes ordered by decreasing LaVOUS LRT. The same LRT ranking is used for both calibrations in each panel; only the p/q calibration differs. The dotted horizontal line marks q = 0.05, and each panel reports the number of genes with q < 0.05 for each calibration.
 
-The empirical-null calibration uses the Base-H0 pooled null from the 10k `lavous-calibrate` run and shifts q values relative to the asymptotic chi-square calibration, especially for weaker effects. At q < 0.05, empirical-null call counts are 130, 251, 387, and 481 for theta1 = 1, 3, 5, and 7, respectively. Median empirical-null q values are {med('Base', 'empirical null'):.3f}, {med('Theta1', 'empirical null'):.3f}, {med('t5r5', 'empirical null'):.3f}, and {med('t7r5', 'empirical null'):.3f} for theta1 = 1, 3, 5, and 7, respectively. Inputs were read from `expression_simulation/diff/diff_*_chi-squared.tsv` and the explicit `lavous-calibrate --sim_all 10000` outputs `expression_simulation/diff/test/calibrate_base_h0_empirical_10k/diff_*_empirical-all.tsv`; no original result files were modified.
+The empirical-null calibration uses the Base-H0 pooled null from the 10k `lavous-calibrate` run and shifts q values relative to the asymptotic chi-square calibration, especially for weaker effects. At q < 0.05, empirical-null call counts are 130, 251, 387, and 481 for theta1 = 1, 3, 5, and 7, respectively. Median empirical-null q values are {med('Base', 'empirical null'):.3f}, {med('Theta1', 'empirical null'):.3f}, {med('t5r5', 'empirical null'):.3f}, and {med('t7r5', 'empirical null'):.3f} for theta1 = 1, 3, 5, and 7, respectively. Inputs were read from `expression_simulation/diff/diff_*_chi-squared.tsv` and the copied explicit `lavous-calibrate --sim_all 10000` outputs `supplementary_figures/r5_chisq_vs_empirical_calls/calibrate_base_h0_empirical_10k/diff_*_empirical-all.tsv`; no original result files were modified.
 """
     (THIS_DIR / "caption.md").write_text(caption)
 
