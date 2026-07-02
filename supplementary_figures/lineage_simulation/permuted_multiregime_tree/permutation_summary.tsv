@@ -1,0 +1,14 @@
+swap_type	clade_a	clade_b	n_tips_a	n_tips_b	parent_a	parent_b	parent_depth_a	parent_depth_b	clade_depth_a	clade_depth_b	branch_length_a	branch_length_b	new_branch_length_a	new_branch_length_b	regime_a	regime_b
+regime	c203	c447	24	22	c168	c157	14.0	14.0	15.0	19.0	1.0	5.0	1.0	5.0	1	0
+regime	c711	c852	24	26	c445	c547	19.0	20.0	21.0	22.0	2.0	2.0	1.0	3.0	1	0
+regime	c802	c1340	24	22	c212	c183	15.0	15.0	21.0	24.0	6.0	9.0	6.0	9.0	1	0
+regime	c1054	c1435	24	22	c906	c981	22.0	22.0	23.0	24.0	1.0	2.0	1.0	2.0	1	0
+regime	c1531	c1724	24	21	c1273	c1177	24.0	23.0	25.0	25.0	1.0	2.0	2.0	1.0	1	0
+background_large	c108	c255	54	94	c20	c90	6.0	11.0	12.0	16.0	6.0	5.0	1.0	10.0	0	0
+background_large	c1273	c819	33	32	c124	c215	13.0	15.0	24.0	21.0	11.0	6.0	9.0	8.0	0	0
+background_large	c324	c271	45	46	c261	c166	16.0	14.0	17.0	17.0	1.0	3.0	3.0	1.0	0	0
+background	c863	c618	12	12	c172	c157	14.0	14.0	22.0	20.0	8.0	6.0	8.0	6.0	0	0
+background	c3371	c3130	8	8	c2632	c2747	28.0	28.0	29.0	29.0	1.0	1.0	1.0	1.0	0	0
+background	c1439	c1490	20	20	c818	c868	21.0	22.0	24.0	25.0	3.0	3.0	2.0	4.0	0	0
+background	c1366	c2969	8	8	c908	c1177	22.0	23.0	24.0	28.0	2.0	5.0	1.0	6.0	0	0
+background	c1438	c1407	12	16	c981	c844	22.0	22.0	24.0	24.0	2.0	2.0	2.0	2.0	0	0

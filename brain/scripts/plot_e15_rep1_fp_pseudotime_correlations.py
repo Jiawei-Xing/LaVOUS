@@ -7,6 +7,7 @@ from pathlib import Path
 import matplotlib
 
 matplotlib.use("Agg")
+matplotlib.rcParams["svg.fonttype"] = "none"
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -20,6 +21,43 @@ DEFAULT_LAVOUS_FILE = Path(
     "sim_each2000_empirical-each.tsv"
 )
 DEFAULT_PREFIX = "e15_rep1_fp_cells"
+DEFAULT_LABEL_GENES = (
+    "Wnt7b",
+    "Pcdh10",
+    "Wnt5a",
+    "Ddc",
+    "Meg3",
+    "Tubb2a",
+    "Ppia",
+    "Ly6h",
+    "Rps24",
+    "Snap47",
+    "Rpl41",
+    "Calm1",
+    "Nfia",
+    "Mab21l2",
+)
+DEFAULT_LABEL_OFFSETS = {
+    "Wnt7b": (-10, 5),
+    "Pcdh10": (0, 10),
+    "Wnt5a": (-14, 4),
+    "Ddc": (8, -4),
+    "Meg3": (-9, 5),
+    "Tubb2a": (36, 10),
+    "Ppia": (14, 5),
+    "Ly6h": (-14, 8),
+    "Rps24": (14, 2),
+    "Snap47": (4, -12),
+    "Rpl41": (14, -7),
+    "Calm1": (-12, -11),
+    "Nfia": (-12, 8),
+    "Mab21l2": (14, -11),
+}
+AXIS_LABEL_FONT_SIZE = 14.0
+GENE_LABEL_FONT_SIZE = 13.0
+TICK_LABEL_FONT_SIZE = GENE_LABEL_FONT_SIZE
+LEGEND_FONT_SIZE = GENE_LABEL_FONT_SIZE
+DEFAULT_LABEL_ALIGNMENTS = {"Pcdh10": "center", "Tubb2a": "right"}
 
 
 def parse_args():
@@ -57,9 +95,26 @@ def parse_args():
         "--label-top",
         type=int,
         default=35,
-        help="Number of significant genes to label, ranked by q then |DA-GLU|.",
+        help="Maximum number of significant genes to label.",
+    )
+    parser.add_argument(
+        "--label-genes",
+        default=",".join(DEFAULT_LABEL_GENES),
+        help=(
+            "Comma-separated genes to label in order. Use auto to label the "
+            "top significant genes ranked by q then |DA-GLU|."
+        ),
     )
     return parser.parse_args()
+
+
+def parse_label_genes(value):
+    value = str(value).strip()
+    if value.lower() == "auto":
+        return None
+    if not value:
+        return ()
+    return tuple(gene.strip() for gene in value.split(",") if gene.strip())
 
 
 def read_inputs(trajectory_dir, prefix, lavous_file):
@@ -173,11 +228,11 @@ def build_correlation_table(expression, genes, obs, lavous):
     return table
 
 
-def plot_correlations(table, out_prefix, label_top):
+def plot_correlations(table, out_prefix, label_top, label_genes):
     plot_table = table.dropna(subset=["corr_pseudotime_glu", "corr_pseudotime_da"])
     significant = plot_table["lavous_signif"].astype(bool)
 
-    fig, ax = plt.subplots(figsize=(6.4, 5.8))
+    fig, ax = plt.subplots(figsize=(6.8, 6.1))
     ax.scatter(
         plot_table.loc[~significant, "corr_pseudotime_glu"],
         plot_table.loc[~significant, "corr_pseudotime_da"],
@@ -205,42 +260,77 @@ def plot_correlations(table, out_prefix, label_top):
     ax.set_xlim(-1.02, 1.02)
     ax.set_ylim(-1.02, 1.02)
     ax.set_aspect("equal", adjustable="box")
-    ax.set_xlabel("Correlation(expression, pseudotime): progenitor to Glu")
-    ax.set_ylabel("Correlation(expression, pseudotime): progenitor to DA")
-    ax.set_title("E15 rep1 FP pseudotime expression correlations")
-    ax.legend(frameon=False, loc="lower right", markerscale=1.2)
+    ax.set_xlabel(
+        "Correlation of expression along pseudotime to GLU",
+        fontsize=AXIS_LABEL_FONT_SIZE,
+    )
+    ax.set_ylabel(
+        "Correlation of expression along pseudotime to DA",
+        fontsize=AXIS_LABEL_FONT_SIZE,
+    )
+    ax.tick_params(axis="both", labelsize=TICK_LABEL_FONT_SIZE)
+    legend = ax.legend(
+        frameon=False,
+        loc="lower right",
+        markerscale=1.2,
+        fontsize=LEGEND_FONT_SIZE,
+    )
 
-    label_table = (
+    label_candidates = (
         plot_table.loc[significant]
         .assign(abs_delta=lambda df: df["corr_da_minus_glu"].abs())
         .sort_values(["lavous_q", "abs_delta"], ascending=[True, False])
-        .head(max(label_top, 0))
     )
+    if label_genes is None:
+        label_table = label_candidates.head(max(label_top, 0))
+    else:
+        label_order = {gene: i for i, gene in enumerate(label_genes)}
+        label_table = label_candidates[
+            label_candidates["gene"].isin(label_order)
+        ].copy()
+        label_table["label_order"] = label_table["gene"].map(label_order)
+        label_table = label_table.sort_values("label_order").head(max(label_top, 0))
+
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    occupied = [legend.get_window_extent(renderer).expanded(1.02, 1.08)]
     for i, row in enumerate(label_table.itertuples(index=False)):
-        dx = 5 if row.corr_pseudotime_glu <= row.corr_pseudotime_da else -5
-        dy = 4 if i % 2 == 0 else -6
-        ax.annotate(
+        dx, dy = DEFAULT_LABEL_OFFSETS.get(
+            row.gene,
+            (
+                8 if row.corr_pseudotime_glu <= row.corr_pseudotime_da else -8,
+                5 if i % 2 == 0 else -7,
+            ),
+        )
+        annotation = ax.annotate(
             row.gene,
             (row.corr_pseudotime_glu, row.corr_pseudotime_da),
             xytext=(dx, dy),
             textcoords="offset points",
-            ha="left" if dx > 0 else "right",
+            ha=DEFAULT_LABEL_ALIGNMENTS.get(row.gene, "left" if dx > 0 else "right"),
             va="center",
-            fontsize=6.2,
+            fontsize=GENE_LABEL_FONT_SIZE,
             fontstyle="italic",
             color="#6B1F1A",
             arrowprops={
                 "arrowstyle": "-",
                 "color": "#A46A65",
-                "linewidth": 0.35,
+                "linewidth": 0.45,
                 "alpha": 0.6,
             },
             zorder=4,
         )
+        fig.canvas.draw()
+        bbox = annotation.get_window_extent(renderer).expanded(1.04, 1.12)
+        if any(bbox.overlaps(existing) for existing in occupied):
+            annotation.remove()
+            continue
+        occupied.append(bbox)
 
     fig.tight_layout()
     fig.savefig(out_prefix.with_suffix(".png"), dpi=300)
     fig.savefig(out_prefix.with_suffix(".pdf"))
+    fig.savefig(out_prefix.with_suffix(".svg"))
     plt.close(fig)
 
 
@@ -260,12 +350,17 @@ def main():
     expression = log_normalize_counts(counts, args.target_sum)
     table = build_correlation_table(expression, genes, obs, lavous)
     table.to_csv(out_prefix.with_suffix(".tsv"), sep="\t", index=False)
-    plot_correlations(table, out_prefix, args.label_top)
+    plot_correlations(
+        table, out_prefix, args.label_top, parse_label_genes(args.label_genes)
+    )
 
-    n_plotted = table[["corr_pseudotime_glu", "corr_pseudotime_da"]].notna().all(axis=1).sum()
+    n_plotted = (
+        table[["corr_pseudotime_glu", "corr_pseudotime_da"]].notna().all(axis=1).sum()
+    )
     n_sig = table["lavous_signif"].sum()
     print(f"Wrote {out_prefix.with_suffix('.png')}")
     print(f"Wrote {out_prefix.with_suffix('.pdf')}")
+    print(f"Wrote {out_prefix.with_suffix('.svg')}")
     print(f"Wrote {out_prefix.with_suffix('.tsv')}")
     print(f"plotted_genes: {n_plotted}")
     print(f"lavous_significant_genes: {n_sig}")
