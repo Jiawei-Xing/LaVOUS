@@ -1,0 +1,5 @@
+# Caption Draft
+
+Supplementary Fig. X. Recovery of OU and variational parameters in simulated data. Panels A-C summarize H1 OU parameter estimates across 500 genes from the r=5 OU differential-expression simulations (`Base`, `Theta1`, `t5r5`, and `t7r5`). Panel A shows the derived OU stationary variance, $\sigma^2/(2lpha)$, rather than $lpha$ and $\sigma$ separately. Black diamonds mark the simulation truth: $\sigma^2/(2lpha)=4.5$, $	heta_0=1$, and $	heta_1 \in {1, 3, 5, 7}$. Panels D-F evaluate VI leaf-level parameters for `Gene_500`, the gene for which `sim_history_*.tsv` stores the simulated expression history. Because the simulator writes terminal expression after the softplus transform, true terminal latent values were recovered with the inverse softplus before comparison with VI $m_q$. Panel E standardizes residuals by VI $s_q$, and Panel F shows the fraction of leaves covered by $m_q \pm 2s_q$.
+
+Inputs were read from `expression_simulation/simulation/` and `expression_simulation/diff/`; no original result files were modified.
