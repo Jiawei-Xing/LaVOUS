@@ -104,6 +104,10 @@ def set_equal_limits(ax, x: pd.Series, y: pd.Series) -> None:
     ax.set_xlim(lo, hi)
     ax.set_ylim(lo, hi)
     ax.set_aspect("equal", adjustable="box")
+    shared_ticks = ax.get_yticks()
+    shared_ticks = shared_ticks[(shared_ticks >= lo) & (shared_ticks <= hi)]
+    ax.set_xticks(shared_ticks)
+    ax.set_yticks(shared_ticks)
     ax.plot([lo, hi], [lo, hi], color="#3b3b3b", lw=0.8, ls="--", zorder=1)
 
 

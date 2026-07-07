@@ -42,6 +42,7 @@ DEFAULT_PROPOSAL = "overdispersed"
 DEFAULT_MIX = 0.8
 DEFAULT_Q_SCALE = 2.0
 DEFAULT_SEED = 20240625
+Q_REFERENCE = 0.05
 
 
 def add_panel_label(ax, label):
@@ -547,6 +548,38 @@ def identity_limits(x, y, pad_fraction=0.04):
     return lo - pad, hi + pad
 
 
+def lr_threshold_for_q(df, q_reference=Q_REFERENCE):
+    label = str(df["label"].iloc[0])
+    diff_path = DIFF_DIR / f"diff_{label}_chi-squared.tsv"
+    if diff_path.exists():
+        diff = pd.read_csv(diff_path, sep="\t")
+        finite = diff[np.isfinite(diff["lrt"].to_numpy(dtype=float))]
+        significant = finite[finite["q"] <= q_reference]
+        if not significant.empty:
+            return float(significant["lrt"].min())
+
+    selected_significant = df[df["q_chisq"] <= q_reference]
+    if not selected_significant.empty:
+        return float(selected_significant["elbo_lr"].min())
+    return None
+
+
+def label_lr_threshold(ax, threshold, x_span, y_top):
+    if threshold is None:
+        return
+    ax.axvline(threshold, color="#b63b32", lw=1.0, ls=":", zorder=1)
+    ax.text(
+        threshold + 0.015 * x_span,
+        y_top,
+        "q = 0.05\nELBO LR",
+        rotation=90,
+        color="#b63b32",
+        ha="left",
+        va="top",
+        fontsize=7,
+    )
+
+
 def plot_figure(df, summary):
     plt.rcParams.update(
         {
@@ -560,6 +593,8 @@ def plot_figure(df, summary):
 
     fig, axes = plt.subplots(2, 2, figsize=(6.9, 5.45))
     axes = axes.ravel()
+    lr_q_threshold = lr_threshold_for_q(df)
+    signif_mask = df["q_chisq"] <= Q_REFERENCE
 
     panel_specs = [
         (axes[0], "A", "elbo_h0_nll", "is_h0_nll", "H0 marginal NLL", "#2f6f9f"),
@@ -588,10 +623,30 @@ def plot_figure(df, summary):
         add_panel_label(ax, panel)
 
     ax = axes[2]
-    ax.scatter(df["elbo_lr"], df["is_lr"], s=23, color="#756bb1", alpha=0.78, linewidth=0)
-    lo, hi = identity_limits(df["elbo_lr"], df["is_lr"], pad_fraction=0.07)
-    lo = min(lo, -3.0)
+    ax.scatter(
+        df.loc[~signif_mask, "elbo_lr"],
+        df.loc[~signif_mask, "is_lr"],
+        s=23,
+        color="#8f8f8f",
+        alpha=0.78,
+        linewidth=0,
+        label="ELBO q > 0.05",
+    )
+    ax.scatter(
+        df.loc[signif_mask, "elbo_lr"],
+        df.loc[signif_mask, "is_lr"],
+        s=23,
+        color="#756bb1",
+        alpha=0.82,
+        linewidth=0,
+        label="ELBO q <= 0.05",
+    )
+    _lo, hi = identity_limits(df["elbo_lr"], df["is_lr"], pad_fraction=0.07)
+    lo = 0.0
     ax.plot([lo, hi], [lo, hi], color="#262626", lw=1, ls="--")
+    if lr_q_threshold is not None:
+        ax.axhline(lr_q_threshold, color="#b63b32", lw=0.9, ls=":", alpha=0.55, zorder=1)
+        label_lr_threshold(ax, lr_q_threshold, hi - lo, lo + 0.52 * (hi - lo))
     ax.axhline(0, color="#bdbdbd", lw=0.8, zorder=0)
     ax.axvline(0, color="#bdbdbd", lw=0.8, zorder=0)
     ax.text(
@@ -608,17 +663,21 @@ def plot_figure(df, summary):
     ax.set_title("Likelihood-ratio statistic")
     ax.set_xlabel("ELBO LR")
     ax.set_ylabel("IS full LR")
+    ax.legend(frameon=False, fontsize=7, loc="lower right")
     add_panel_label(ax, "C")
 
 
     ax = axes[3]
+    lr_error = np.abs(df["is_lr"] - df["elbo_lr"]).to_numpy(dtype=float)
+    sig_values = signif_mask.to_numpy()
     error_sets = [
         np.abs(df["is_h0_nll"] - df["elbo_h0_nll"]).to_numpy(dtype=float),
         np.abs(df["is_h1_nll"] - df["elbo_h1_nll"]).to_numpy(dtype=float),
-        np.abs(df["is_lr"] - df["elbo_lr"]).to_numpy(dtype=float),
+        lr_error,
+        lr_error[~sig_values],
     ]
-    error_labels = ["H0 NLL", "H1 NLL", "LR"]
-    error_colors = ["#2f6f9f", "#2ca25f", "#756bb1"]
+    error_labels = ["H0 NLL", "H1 NLL", "LR", "LR\nq>0.05"]
+    error_colors = ["#2f6f9f", "#2ca25f", "#756bb1", "#b63b32"]
     means = [float(np.mean(values)) for values in error_sets]
     x_pos = np.arange(len(error_sets))
     ax.bar(x_pos, means, color=error_colors, alpha=0.72, width=0.62, edgecolor="#262626", linewidth=0.7)
@@ -635,20 +694,9 @@ def plot_figure(df, summary):
         )
     for x_i, value in zip(x_pos, means):
         ax.text(x_i, value + 0.55, f"{value:.1f}", ha="center", va="bottom", fontsize=7)
-    lr_vs_h0 = means[2] / means[0]
-    lr_vs_h1 = means[2] / means[1]
-    ax.text(
-        0.04,
-        0.96,
-        f"LR/H0 = {lr_vs_h0:.2f}\nLR/H1 = {lr_vs_h1:.2f}",
-        transform=ax.transAxes,
-        va="top",
-        ha="left",
-        fontsize=7,
-    )
     ax.set_xticks(x_pos)
     ax.set_xticklabels(error_labels)
-    ax.set_ylim(0, max(max(np.max(v) for v in error_sets), max(means)) * 1.14)
+    ax.set_ylim(0, max(max(np.max(v) for v in error_sets), max(means)) * 1.16)
     ax.set_title("Approximation error")
     ax.set_ylabel("Mean absolute error")
     add_panel_label(ax, "D")
@@ -672,6 +720,9 @@ def write_caption(df, summary):
     mix = float(summary["mix"])
     proposal = str(summary["proposal"])
     q_scale = float(summary["q_scale"])
+    noncalled = df[df["q_chisq"] > Q_REFERENCE]
+    noncalled_lr_mae = float(np.mean(np.abs(noncalled["is_lr"] - noncalled["elbo_lr"])))
+    n_noncalled = len(noncalled)
     if proposal == "q":
         proposal_sentence = "Importance sampling used the fitted variational distribution q(z|x) as the proposal"
         figure_phrase = "q-proposal importance-sampling"
@@ -683,9 +734,9 @@ def write_caption(df, summary):
         figure_phrase = "defensive importance-sampling"
     caption = f"""# Caption Draft
 
-Supplementary Fig. X. ELBO approximation quality assessed by {figure_phrase} marginal likelihood estimates. Panels A and B compare the saved variational negative ELBOs with IS-estimated full marginal negative log likelihoods for H0 and H1, respectively, using a stratified subset of {n_genes} genes from the `{label}` simulation. Because the original differential-test run used `const=false`, the gene-wise negative-binomial observation constant was added back to the saved ELBO losses before these absolute NLL comparisons. Panel C compares the ELBO-based likelihood-ratio statistic, `2*(H0 - H1)`, with the corresponding IS-estimated full LR. Panel D compares mean absolute error for the H0 NLL, H1 NLL, and LR, showing that the ELBO approximation is closer to the IS estimate after the H0-H1 subtraction used in the LRT.
+Supplementary Fig. X. ELBO approximation quality assessed by {figure_phrase} marginal likelihood estimates. Panels A and B compare the saved variational negative ELBOs with IS-estimated full marginal negative log likelihoods for H0 and H1, respectively, using a stratified subset of {n_genes} genes from the `{label}` simulation. Because the original differential-test run used `const=false`, the gene-wise negative-binomial observation constant was added back to the saved ELBO losses before these absolute NLL comparisons. Panel C compares the ELBO-based likelihood-ratio statistic, `2*(H0 - H1)`, with the corresponding IS-estimated full LR. The red dotted line marks the ELBO LR cutoff corresponding to q = 0.05 in the full `{label}` chi-square-calibrated differential-test result. Panel D compares mean absolute error for H0 NLL, H1 NLL, all LR values, and the LR subset with q > 0.05.
 
-{proposal_sentence}, with {n_replicates} independent replicates of S = {n_samples} samples per gene and hypothesis ({total_samples} pooled samples total). The fitted variational distributions, OU parameters, and NB dispersions were read from `expression_simulation/diff/`; no model was re-optimized and no original result files were modified. Summary metrics for this subset: Pearson r = {summary['pearson_elbo_lr_vs_is_lr']:.3f} for ELBO LR versus IS full LR; mean absolute errors are H0 NLL = {summary['mae_h0_nll']:.3f}, H1 NLL = {summary['mae_h1_nll']:.3f}, and LR = {summary['mae_lr']:.3f}; median replicate-based LR Monte Carlo SE = {summary['median_lr_replicate_mc_se']:.3f}.
+{proposal_sentence}, with {n_replicates} independent replicates of S = {n_samples} samples per gene and hypothesis ({total_samples} pooled samples total). The fitted variational distributions, OU parameters, and NB dispersions were read from `expression_simulation/diff/`; no model was re-optimized and no original result files were modified. Summary metrics for this subset: Pearson r = {summary['pearson_elbo_lr_vs_is_lr']:.3f} for ELBO LR versus IS full LR; mean absolute errors are H0 NLL = {summary['mae_h0_nll']:.3f}, H1 NLL = {summary['mae_h1_nll']:.3f}, LR = {summary['mae_lr']:.3f}, and LR among q > 0.05 genes = {noncalled_lr_mae:.3f} (n = {n_noncalled}); median replicate-based LR Monte Carlo SE = {summary['median_lr_replicate_mc_se']:.3f}.
 """
     (THIS_DIR / "caption.md").write_text(caption)
 

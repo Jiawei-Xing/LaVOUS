@@ -204,7 +204,6 @@ def plot_figure(ou_df, vi_df):
     ax.set_xlabel(r"True $\theta_1$")
     ax.set_ylabel(r"Inferred $\sigma^2/(2\alpha)$")
     ax.set_title("OU stationary variance")
-    ax.legend(frameon=False, fontsize=7, loc="upper left")
     add_panel_label(ax, "A")
 
     # B. Background optimum recovery.
@@ -217,7 +216,6 @@ def plot_figure(ou_df, vi_df):
     ax.set_xlabel(r"True $\theta_1$")
     ax.set_ylabel(r"Inferred $\theta_0$")
     ax.set_title("Background optimum")
-    ax.legend(frameon=False, fontsize=7, loc="upper left")
     add_panel_label(ax, "B")
 
     # C. Selected-regime optimum recovery.
@@ -256,6 +254,11 @@ def plot_figure(ou_df, vi_df):
     ax.text(0.04, 0.96, f"r = {corr:.2f}\nRMSE = {rmse:.2f}", transform=ax.transAxes, va="top", ha="left", fontsize=7)
     ax.set_xlim(min_v - pad, max_v + pad)
     ax.set_ylim(min_v - pad, max_v + pad)
+    ax.set_aspect("equal", adjustable="box")
+    shared_ticks = ax.get_yticks()
+    shared_ticks = shared_ticks[(shared_ticks >= min_v - pad) & (shared_ticks <= max_v + pad)]
+    ax.set_xticks(shared_ticks)
+    ax.set_yticks(shared_ticks)
     ax.set_xlabel(f"True latent leaf value ({GENE_FOR_VI})")
     ax.set_ylabel(r"VI $m_q$")
     ax.set_title("VI mean recovery")
@@ -284,9 +287,12 @@ def plot_figure(ou_df, vi_df):
     rmse_by = vi_df.groupby("scenario")["error"].apply(lambda e: np.sqrt(np.mean(np.square(e)))).reindex([s["label"] for s in SCENARIOS])
     colors = [s["color"] for s in SCENARIOS]
     ax.axhline(0.95, color="#b63b32", linestyle="--", linewidth=1.0, label="95%")
-    for xi, val, err, color in zip(x, coverage.to_numpy(), rmse_by.to_numpy(), colors):
+    for idx, (xi, val, err, color) in enumerate(zip(x, coverage.to_numpy(), rmse_by.to_numpy(), colors)):
         ax.scatter([xi], [val], s=44, color=color, edgecolor="#262626", linewidth=0.5, zorder=3)
-        ax.text(xi, val + 0.004, f"{val:.2f}\nRMSE {err:.2f}", ha="center", va="bottom", fontsize=6.5)
+        if idx == 0:
+            ax.text(xi + 0.12, val - 0.006, f"{val:.2f}\nRMSE {err:.2f}", ha="left", va="top", fontsize=6.5)
+        else:
+            ax.text(xi, val + 0.004, f"{val:.2f}\nRMSE {err:.2f}", ha="center", va="bottom", fontsize=6.5)
     ax.set_ylim(0.90, 1.005)
     ax.set_xticks(x)
     ax.set_xticklabels(tick_labels)
