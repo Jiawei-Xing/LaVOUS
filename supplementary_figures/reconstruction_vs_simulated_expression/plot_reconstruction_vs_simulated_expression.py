@@ -172,7 +172,7 @@ def plot_figure(df: pd.DataFrame, summary: pd.DataFrame, out_prefix: Path) -> No
         ax.text(
             0.04,
             0.96,
-            rf"$r$={all_stats['pearson_r']:.2f}" + "\n" + rf"MAE={all_stats['mae']:.2f}",
+            rf"$r$={all_stats['pearson_r']:.2f}",
             transform=ax.transAxes,
             ha="left",
             va="top",
@@ -212,7 +212,7 @@ def plot_figure(df: pd.DataFrame, summary: pd.DataFrame, out_prefix: Path) -> No
         x - width / 2,
         all_summary["mae"],
         width=width,
-        color="#2b7c85",
+        color="#4c78a8",
         label="MAE",
     )
     ax.bar(

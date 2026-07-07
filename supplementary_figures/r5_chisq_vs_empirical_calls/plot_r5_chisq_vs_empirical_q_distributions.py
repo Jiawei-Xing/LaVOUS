@@ -118,17 +118,15 @@ def plot_figure(source):
         ax.plot(sub["lrt_rank"], sub["q_chisq"], color=CHI_COLOR, lw=1.5, label="chi-square")
         ax.plot(sub["lrt_rank"], sub["q_empirical"], color=EMP_COLOR, lw=1.5, label="empirical null")
         ax.axhline(Q_REFERENCE, color="#707070", lw=0.9, ls=":")
-        n_chi = int((sub["q_chisq"] < Q_REFERENCE).sum())
-        n_emp = int((sub["q_empirical"] < Q_REFERENCE).sum())
         ax.text(
             0.04,
-            0.94,
-            f"q<0.05\nchi: {n_chi}\nemp: {n_emp}",
-            transform=ax.transAxes,
+            Q_REFERENCE + 0.02,
+            "q = 0.05",
+            transform=ax.get_yaxis_transform(),
             ha="left",
-            va="top",
+            va="bottom",
             fontsize=7,
-            bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.78, "pad": 1.5},
+            color="#555555",
         )
         ax.set_title(scenario["title"])
         ax.set_xlabel("Gene rank by LRT")
@@ -136,7 +134,7 @@ def plot_figure(source):
         ax.set_ylim(-0.03, 1.03)
         if ax is axes[0]:
             ax.set_ylabel("q value")
-            ax.legend(frameon=False, fontsize=7, loc="upper right")
+            ax.legend(frameon=False, fontsize=7, loc="upper left")
         add_panel_label(ax, panel)
 
     fig.suptitle("r = 5 q-value distributions by calibration", y=1.05, fontsize=10)
@@ -153,9 +151,9 @@ def write_caption(summary):
 
     caption = f"""# Caption Draft
 
-Supplementary Fig. X. Example r = 5 simulation q-value distributions under chi-square and empirical-null calibration. Panels A-D show per-gene q values for theta1 = 1, 3, 5, and 7 simulations, with genes ordered by decreasing LaVOUS LRT. The same LRT ranking is used for both calibrations in each panel; only the p/q calibration differs. The dotted horizontal line marks q = 0.05, and each panel reports the number of genes with q < 0.05 for each calibration.
+Supplementary Fig. X. Example r = 5 simulation q-value distributions under chi-square and empirical-null calibration. Panels A-D show per-gene q values for theta1 = 1, 3, 5, and 7 simulations, with genes ordered by decreasing LaVOUS LRT. The same LRT ranking is used for both calibrations in each panel; only the p/q calibration differs. The dotted horizontal line marks q = 0.05.
 
-The empirical-null calibration uses the Base-H0 pooled null from the 10k `lavous-calibrate` run and shifts q values relative to the asymptotic chi-square calibration, especially for weaker effects. At q < 0.05, empirical-null call counts are 130, 251, 387, and 481 for theta1 = 1, 3, 5, and 7, respectively. Median empirical-null q values are {med('Base', 'empirical null'):.3f}, {med('Theta1', 'empirical null'):.3f}, {med('t5r5', 'empirical null'):.3f}, and {med('t7r5', 'empirical null'):.3f} for theta1 = 1, 3, 5, and 7, respectively. Inputs were read from `expression_simulation/diff/diff_*_chi-squared.tsv` and the copied explicit `lavous-calibrate --sim_all 10000` outputs `supplementary_figures/r5_chisq_vs_empirical_calls/calibrate_base_h0_empirical_10k/diff_*_empirical-all.tsv`; no original result files were modified.
+The empirical-null calibration uses the Base-H0 pooled null from the 10k `lavous-calibrate` run and shifts q values relative to the asymptotic chi-square calibration, especially for weaker effects. Median empirical-null q values are {med('Base', 'empirical null'):.3f}, {med('Theta1', 'empirical null'):.3f}, {med('t5r5', 'empirical null'):.3f}, and {med('t7r5', 'empirical null'):.3f} for theta1 = 1, 3, 5, and 7, respectively. Inputs were read from `expression_simulation/diff/diff_*_chi-squared.tsv` and the copied explicit `lavous-calibrate --sim_all 10000` outputs `supplementary_figures/r5_chisq_vs_empirical_calls/calibrate_base_h0_empirical_10k/diff_*_empirical-all.tsv`; no original result files were modified.
 """
     (THIS_DIR / "caption.md").write_text(caption)
 

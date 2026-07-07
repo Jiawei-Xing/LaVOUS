@@ -25,9 +25,9 @@ FDR_ALPHA = 0.05
 # These are the three theta1 == theta0 null differential-test outputs present
 # in expression_simulation/diff. Base is the r=5 baseline in run_diff.sh.
 NULL_SETS = [
-    ("Base", "r = 5 (Base)", "#2f6f9f"),
-    ("rL", "r = 50 (rL)", "#2ca25f"),
-    ("r0", "r0", "#756bb1"),
+    ("Base", "r = 5", "#2f6f9f"),
+    ("rL", "r = 50", "#2ca25f"),
+    ("r0", r"$r = \infty$", "#756bb1"),
 ]
 
 
@@ -122,7 +122,7 @@ def write_summary(records):
 def write_caption():
     caption = """# Caption Draft
 
-Supplementary Fig. X. Null likelihood-ratio statistics compared with the asymptotic chi-square reference. QQ plots show the per-gene LaVOUS differential-test LRTs for the three theta1 = theta0 null simulation settings available in `expression_simulation/diff`: `Base` (r = 5 baseline), `rL` (r = 50), and `r0`. The dashed line indicates equality with a chi-square distribution with one degree of freedom. In all three null settings, the observed LRTs show strong upward tail deviation from the chi-square reference, explaining why chi-square-calibrated p-values are anti-conservative for these simulations.
+Supplementary Fig. X. Null likelihood-ratio statistics compared with the asymptotic chi-square reference. QQ plots show the per-gene LaVOUS differential-test LRTs for the three theta1 = theta0 null simulation settings available in `expression_simulation/diff`: `Base` (r = 5 baseline), `rL` (r = 50), and `r0` (r = infinity). The black dashed line indicates equality with a chi-square distribution with one degree of freedom; red dotted vertical lines mark the expected-quantile position where genes first pass BH q = 0.05 in each panel. In all three null settings, the observed LRTs show strong upward tail deviation from the chi-square reference, explaining why chi-square-calibrated p-values are anti-conservative for these simulations.
 
 No empirical null distributions were pooled across r settings; each panel uses only the corresponding null result file. Inputs were read from `expression_simulation/diff/`; no original result files were modified.
 """
@@ -152,7 +152,6 @@ def main():
         x_max = max(x_max, float(np.max(expected)))
 
     fig, axes = plt.subplots(1, len(records), figsize=(7.6, 2.65), sharey=True)
-    chi95 = chi2.ppf(0.95, df=1)
     y_upper = y_max * 1.06
     y_lower = min(-1.0, min(float(np.min(record[5])) for record in records) * 1.08)
     diag_max = min(x_max * 1.04, y_upper)
@@ -161,18 +160,29 @@ def main():
         label, title, color, df, expected, observed, _probs = record
         ax.scatter(expected, observed, s=10, alpha=0.68, linewidth=0, color=color)
         ax.plot([0, diag_max], [0, diag_max], color="#262626", lw=1, ls="--")
-        ax.axvline(chi95, color="#b63b32", lw=0.9, ls=":")
-        p_calls = int((df["p"] <= FDR_ALPHA).sum())
-        q_calls = int((df["q"] <= FDR_ALPHA).sum())
-        ax.text(
-            0.04,
-            0.96,
-            f"p <= 0.05: {p_calls}/{len(df)}\nBH q <= 0.05: {q_calls}/{len(df)}",
-            transform=ax.transAxes,
-            ha="left",
-            va="top",
-            fontsize=7,
-        )
+        q_sig = df[df["q"] <= FDR_ALPHA]
+        if not q_sig.empty:
+            q_threshold = float(q_sig["lrt"].min())
+            boundary_idx = int(np.searchsorted(observed, q_threshold, side="left"))
+            boundary_idx = min(max(boundary_idx, 0), len(expected) - 1)
+            q_x = float(expected[boundary_idx])
+            x_limit = x_max * 1.04
+            label_x = q_x + 0.015 * x_limit
+            label_ha = "left"
+            if label_x > 0.96 * x_limit:
+                label_x = q_x - 0.015 * x_limit
+                label_ha = "right"
+            ax.axvline(q_x, color="#b63b32", lw=0.9, ls=":")
+            ax.text(
+                label_x,
+                y_upper * 0.92,
+                "q = 0.05",
+                rotation=90,
+                color="#b63b32",
+                ha=label_ha,
+                va="top",
+                fontsize=7,
+            )
         ax.set_title(title)
         ax.set_xlim(0, x_max * 1.04)
         ax.set_ylim(y_lower, y_upper)

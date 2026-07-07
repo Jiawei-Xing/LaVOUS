@@ -604,12 +604,11 @@ def plot_figure(df, summary):
         ax.scatter(df[x_col], df[y_col], s=22, color=color, alpha=0.78, linewidth=0)
         lo, hi = identity_limits(df[x_col], df[y_col])
         ax.plot([lo, hi], [lo, hi], color="#262626", lw=1, ls="--")
-        r, rho = corr_metrics(df[x_col], df[y_col])
-        mae = np.mean(np.abs(df[y_col] - df[x_col]))
+        r, _rho = corr_metrics(df[x_col], df[y_col])
         ax.text(
             0.04,
             0.96,
-            f"r = {r:.2f}\nrho = {rho:.2f}\nMAE = {mae:.1f}",
+            f"r = {r:.2f}",
             transform=ax.transAxes,
             va="top",
             ha="left",
@@ -652,7 +651,7 @@ def plot_figure(df, summary):
     ax.text(
         0.04,
         0.96,
-        f"r = {summary['pearson_elbo_lr_vs_is_lr']:.2f}\nrho = {summary['spearman_elbo_lr_vs_is_lr']:.2f}\nMAE = {summary['mae_lr']:.1f}",
+        f"r = {summary['pearson_elbo_lr_vs_is_lr']:.2f}",
         transform=ax.transAxes,
         va="top",
         ha="left",
@@ -677,7 +676,7 @@ def plot_figure(df, summary):
         lr_error[~sig_values],
     ]
     error_labels = ["H0 NLL", "H1 NLL", "LR", "LR\nq>0.05"]
-    error_colors = ["#2f6f9f", "#2ca25f", "#756bb1", "#b63b32"]
+    error_colors = ["#2f6f9f", "#2ca25f", "#756bb1", "#8f8f8f"]
     means = [float(np.mean(values)) for values in error_sets]
     x_pos = np.arange(len(error_sets))
     ax.bar(x_pos, means, color=error_colors, alpha=0.72, width=0.62, edgecolor="#262626", linewidth=0.7)
