@@ -25,9 +25,9 @@ FDR_ALPHA = 0.05
 # These are the three theta1 == theta0 null differential-test outputs present
 # in expression_simulation/diff. Base is the r=5 baseline in run_diff.sh.
 NULL_SETS = [
-    ("Base", "r = 5", "#2f6f9f"),
-    ("rL", "r = 50", "#2ca25f"),
-    ("r0", r"$r = \infty$", "#756bb1"),
+    ("Base", r"$\mathrm{r} = 5$", "#2f6f9f"),
+    ("rL", r"$\mathrm{r} = 50$", "#2ca25f"),
+    ("r0", r"$\mathrm{r} = \infty$", "#756bb1"),
 ]
 
 
