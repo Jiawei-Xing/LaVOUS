@@ -22,7 +22,6 @@ The package implements three analysis workflows:
    lineage tree using fitted OU/BM parameters and variational leaf beliefs.
 
 The source files are in `source/`.
-\nThe accompanying preprint is available on [bioRxiv](https://www.biorxiv.org/content/10.64898/2026.06.25.734628v1).
 
 ## Installation
 
@@ -193,3 +192,9 @@ More detailed developer notes are in `docs/source_map.md`.
 
 Larger real-data, simulation, and publication-figure workflows are grouped
 under `analysis/`.
+
+
+## Citation
+The accompanying preprint is available on [bioRxiv](https://www.biorxiv.org/content/10.64898/2026.06.25.734628v1):
+
+Xing J, Staklinski SJ, Liu Z, Nowak D, Siepel A. Lineage-aware stochastic modeling reveals gene-expression dynamics in development and disease. <i>bioRxiv</i>. doi:10.64898/2026.06.25.734628.
