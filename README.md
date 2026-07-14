@@ -55,6 +55,37 @@ comma-separated file lists for multi-clone analyses. Supply one path per tree
 for each applicable file option, including `--null_regime` when it is used.
 The code aligns cells to tree leaves by name during preprocessing.
 
+
+## Outputs
+
+All output paths are user-controlled. The examples below place results in `examples/output_results/`; for checks or repeated runs, use a disposable directory such as `/tmp/lavous-check/` instead.
+
+The expression-heritability test writes the TSV supplied to `--outfile`. It contains one row per gene with the BM likelihood-ratio statistic, p-value, q-value, and fitted lambda and variance parameters.
+
+
+
+The differential-expression workflow writes:
+
+- `{prefix}_chi-squared.tsv`: fitted parameters, losses, LR statistic, p-value,
+  q-value, and significance indicator.
+- `{prefix}_model-params.tsv`: long-form fitted OU parameters with one row per
+  gene, hypothesis, and regime. This is the preferred parameter file for
+  calibration diagnostics and reconstruction.
+- `{prefix}_meta.json`: run metadata needed for empirical-null calibration.
+- `{prefix}_h0_q-mean-std_*.tsv` and `{prefix}_h1_q-mean-std_*.tsv`:
+  variational leaf means and standard deviations. Columns are named
+  `q_mean_{cell}` and `q_std_{cell}`.
+
+The calibration writes:
+- `{prefix}_empirical-all.tsv` for shared null simulations (`--sim_all`).
+- `{prefix}_empirical-each.tsv` for per-gene null simulations (`--sim_each`).
+
+Calibration outputs are written beside the input chi-squared table by default; use `--outdir` and `--prefix` to choose a different location and filename.
+
+History reconstruction writes the paths supplied to `--out_tsv` and `--out_fig`: a tab-separated table of reconstructed ancestral states and an optional tree figure. Simulation writes the read-count matrix named by `--label` under `--out` (for example, `readcounts_demo.tsv`).
+
+
+
 ## Quick Start
 
 Run the examples from the repository root after installation. Optionally, create
@@ -89,18 +120,6 @@ lavous-diff \
 By default, `lavous-diff` compares the alternative regime partition against an
 H0 with one shared theta. Pass `--null_regime PATH` to compare it against a
 coarser multi-theta H0 instead.
-
-The differential-expression workflow writes:
-
-- `{prefix}_chi-squared.tsv`: fitted parameters, losses, LR statistic, p-value,
-  q-value, and significance indicator.
-- `{prefix}_model-params.tsv`: long-form fitted OU parameters with one row per
-  gene, hypothesis, and regime. This is the preferred parameter file for
-  calibration diagnostics and reconstruction.
-- `{prefix}_meta.json`: run metadata needed for empirical-null calibration.
-- `{prefix}_h0_q-mean-std_*.tsv` and `{prefix}_h1_q-mean-std_*.tsv`:
-  variational leaf means and standard deviations. Columns are named
-  `q_mean_{cell}` and `q_std_{cell}`.
 
 The result table reports `lrt = 2 * (h0_loss - h1_loss)`. 
 Chi-squared p-values are computed from `lrt`; empirical
