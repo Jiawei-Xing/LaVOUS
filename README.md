@@ -1,6 +1,6 @@
 # LaVOUS
 
-LaVOUS (Lineage-aware Variational Ornstein-Uhlenbeck Stochastics) 
+LaVOUS (Lineage-aware Variational Ornstein-Uhlenbeck Stochastics)
 is a lineage-aware variational model for single-cell RNA-seq count data.
 It models latent expression on a cell-lineage tree with Brownian motion (BM) or
 Ornstein-Uhlenbeck (OU) dynamics, maps latent expression through a softplus link,
@@ -22,6 +22,7 @@ The package implements three analysis workflows:
    lineage tree using fitted OU/BM parameters and variational leaf beliefs.
 
 The source files are in `source/`.
+\nThe accompanying preprint is available on [bioRxiv](https://www.biorxiv.org/content/10.64898/2026.06.25.734628v1).
 
 ## Installation
 
@@ -58,11 +59,7 @@ The code aligns cells to tree leaves by name during preprocessing.
 
 ## Outputs
 
-All output paths are user-controlled. The examples below place results in `examples/output_results/`; for checks or repeated runs, use a disposable directory such as `/tmp/lavous-check/` instead.
-
 The expression-heritability test writes the TSV supplied to `--outfile`. It contains one row per gene with the BM likelihood-ratio statistic, p-value, q-value, and fitted lambda and variance parameters.
-
-
 
 The differential-expression workflow writes:
 
@@ -80,11 +77,9 @@ The calibration writes:
 - `{prefix}_empirical-all.tsv` for shared null simulations (`--sim_all`).
 - `{prefix}_empirical-each.tsv` for per-gene null simulations (`--sim_each`).
 
-Calibration outputs are written beside the input chi-squared table by default; use `--outdir` and `--prefix` to choose a different location and filename.
+History reconstruction writes the paths supplied to `--out_tsv` and `--out_fig`: a tab-separated table of reconstructed ancestral states and an optional tree figure.
 
-History reconstruction writes the paths supplied to `--out_tsv` and `--out_fig`: a tab-separated table of reconstructed ancestral states and an optional tree figure. Simulation writes the read-count matrix named by `--label` under `--out` (for example, `readcounts_demo.tsv`).
-
-
+Simulation writes the read-count matrix named by `--label` under `--out` (for example, `readcounts_demo.tsv`).
 
 ## Quick Start
 
@@ -121,7 +116,7 @@ By default, `lavous-diff` compares the alternative regime partition against an
 H0 with one shared theta. Pass `--null_regime PATH` to compare it against a
 coarser multi-theta H0 instead.
 
-The result table reports `lrt = 2 * (h0_loss - h1_loss)`. 
+The result table reports `lrt = 2 * (h0_loss - h1_loss)`.
 Chi-squared p-values are computed from `lrt`; empirical
 calibration compares simulated and observed `(h0_loss - h1_loss)`.
 
@@ -179,7 +174,7 @@ lavous-simulate \
   --label demo
 ```
 
-This writes simulation `examples/input_data/readcounts_demo.tsv`. 
+This writes simulation `examples/input_data/readcounts_demo.tsv`.
 
 ## Source Layout
 
@@ -197,4 +192,4 @@ This writes simulation `examples/input_data/readcounts_demo.tsv`.
 More detailed developer notes are in `docs/source_map.md`.
 
 Larger real-data, simulation, and publication-figure workflows are grouped
-under `analysis/`. 
+under `analysis/`.
