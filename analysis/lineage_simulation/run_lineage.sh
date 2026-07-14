@@ -1,6 +1,6 @@
 # conda activate simulate
 
-# cd /grid/siepel/home/xing/gene_expression_evolution/SingleCellStochastics/lineage_simulation                                                                                                                             
+# cd analysis/lineage_simulation
                                                                                                                                                                                                                         
 # # build (once)
 # mkdir -p build && cd build && cmake .. && make && cd ..                                                                                                                                                                  

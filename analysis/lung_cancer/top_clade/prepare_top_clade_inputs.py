@@ -11,19 +11,17 @@ from Bio import Phylo
 from Bio.Phylo.Newick import Tree
 
 
-DEFAULT_META = (
-    "/grid/siepel/home/xing/gene_expression_evolution/SingleCellStochastics/"
-    "test_real_data/Yang_KP-Tracer/KPTracer_meta.csv"
-)
-
-
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tree", default="data/3724_NT_All_vine_tree.nwk")
     parser.add_argument("--regime", default="data/3724_NT_All_vine_regime.csv")
     parser.add_argument("--read-counts", default="data/3724_NT_All_readcounts.tsv")
     parser.add_argument("--library", default="data/3724_NT_All_library.tsv")
-    parser.add_argument("--metadata", default=DEFAULT_META)
+    parser.add_argument(
+        "--metadata",
+        default=None,
+        help="Optional KP-Tracer metadata CSV; omitted when not supplied.",
+    )
     parser.add_argument("--outdir", default="top_clade/data")
     parser.add_argument("--prefix", default="3724_NT_TopClade")
     parser.add_argument(

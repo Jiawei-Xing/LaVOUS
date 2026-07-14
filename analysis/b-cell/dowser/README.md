@@ -1,6 +1,7 @@
 # Dowser/IgPhyML trees from TRIBAL covid19 data
 
-Pipeline to build ML B-cell lineage trees from the TRIBAL SARS-CoV-2 example dataset (`../tribal/tribal_sarscov2_score_example/_covid_data/covid19_data/`).
+Pipeline to build ML B-cell lineage trees from the copied TRIBAL SARS-CoV-2
+inputs in `../covid19_data/`.
 
 ## Output of conversion step
 - 2456 heavy-chain sequences across 203 clones (out of 2508/207 in the source)
@@ -16,7 +17,7 @@ Pipeline to build ML B-cell lineage trees from the TRIBAL SARS-CoV-2 example dat
 
 ### 1. Convert
 ```bash
-cd /grid/siepel/home/xing/gene_expression_evolution/SingleCellStochastics/b-cell/dowser
+cd analysis/b-cell/dowser
 conda activate tribal       # any env with pandas
 python convert_to_airr.py --out covid19.airr.tsv
 ```

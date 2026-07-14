@@ -1,7 +1,7 @@
 # LAVOUS Source Map
 
 This document maps the publication workflows to the code paths in
-`singlecellstochastics/`. It is intended to make review and maintenance easier
+`source/`. It is intended to make review and maintenance easier
 without changing the mathematical implementation.
 
 ## Core Data Flow
@@ -23,7 +23,6 @@ without changing the mathematical implementation.
 CLI:
 
 - `lavous-heritability`
-- `run-plasticity-test`
 
 Main function:
 
@@ -45,7 +44,6 @@ Important code:
 CLI:
 
 - `lavous-diff`
-- `run-diff-test`
 
 Main functions:
 
@@ -72,7 +70,6 @@ Important code:
 CLI:
 
 - `lavous-calibrate`
-- `run-calibrate`
 
 Main function:
 
@@ -97,7 +94,6 @@ Important code:
 CLI:
 
 - `lavous-reconstruct`
-- `run-reconst`
 
 Main function:
 

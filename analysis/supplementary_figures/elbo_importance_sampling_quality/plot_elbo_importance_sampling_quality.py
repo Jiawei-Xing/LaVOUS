@@ -597,8 +597,8 @@ def plot_figure(df, summary):
     signif_mask = df["q_chisq"] <= Q_REFERENCE
 
     panel_specs = [
-        (axes[0], "A", "elbo_h0_nll", "is_h0_nll", "H0 marginal NLL", "#2f6f9f"),
-        (axes[1], "B", "elbo_h1_nll", "is_h1_nll", "H1 marginal NLL", "#2ca25f"),
+        (axes[0], "A", "elbo_h0_nll", "is_h0_nll", r"H$_0$ marginal NLL", "#2f6f9f"),
+        (axes[1], "B", "elbo_h1_nll", "is_h1_nll", r"H$_1$ marginal NLL", "#2ca25f"),
     ]
     for ax, panel, x_col, y_col, title, color in panel_specs:
         ax.scatter(df[x_col], df[y_col], s=22, color=color, alpha=0.78, linewidth=0)
@@ -675,7 +675,7 @@ def plot_figure(df, summary):
         lr_error,
         lr_error[~sig_values],
     ]
-    error_labels = ["H0 NLL", "H1 NLL", "LR", "LR\nq>0.05"]
+    error_labels = [r"H$_0$ NLL", r"H$_1$ NLL", "LR", "LR\nq>0.05"]
     error_colors = ["#2f6f9f", "#2ca25f", "#756bb1", "#8f8f8f"]
     means = [float(np.mean(values)) for values in error_sets]
     x_pos = np.arange(len(error_sets))

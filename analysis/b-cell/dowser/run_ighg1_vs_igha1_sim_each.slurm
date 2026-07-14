@@ -9,10 +9,23 @@
 
 set -euo pipefail
 
-DEFAULT_WORK_ROOT="/grid/siepel/home/xing/gene_expression_evolution/SingleCellStochastics/b-cell/dowser"
-WORK_ROOT="${WORK_ROOT:-${SLURM_SUBMIT_DIR:-${DEFAULT_WORK_ROOT}}}"
-if [[ ! -d "${WORK_ROOT}/ighg1_vs_igha1" && -d "${DEFAULT_WORK_ROOT}/ighg1_vs_igha1" ]]; then
-    WORK_ROOT="${DEFAULT_WORK_ROOT}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEFAULT_WORK_ROOT="${SCRIPT_DIR}"
+if [[ -n "${SLURM_SUBMIT_DIR:-}" ]]; then
+    for candidate in \
+        "${SLURM_SUBMIT_DIR}" \
+        "${SLURM_SUBMIT_DIR}/b-cell/dowser" \
+        "${SLURM_SUBMIT_DIR}/analysis/b-cell/dowser"; do
+        if [[ -d "${candidate}/ighg1_vs_igha1" ]]; then
+            DEFAULT_WORK_ROOT="${candidate}"
+            break
+        fi
+    done
+fi
+WORK_ROOT="${WORK_ROOT:-${DEFAULT_WORK_ROOT}}"
+if [[ ! -d "${WORK_ROOT}/ighg1_vs_igha1" ]]; then
+    echo "Cannot find ighg1_vs_igha1 under WORK_ROOT=${WORK_ROOT}" >&2
+    exit 2
 fi
 cd "${WORK_ROOT}"
 

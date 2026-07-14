@@ -15,11 +15,11 @@ def parse_args():
     )
     parser.add_argument(
         "--datadir",
-        default=os.environ.get(
-            "DEPOSITED_DATA_DIR",
-            "/grid/siepel/home/xing/gene_expression_evolution/SingleCellStochastics/real_data/Yang_KP-Tracer",
+        default=os.environ.get("DEPOSITED_DATA_DIR"),
+        help=(
+            "Directory containing deposited KP-Tracer character, AnnData, and "
+            "metadata files. Defaults to DEPOSITED_DATA_DIR."
         ),
-        help="Directory containing deposited KP-Tracer character, AnnData, and metadata files.",
     )
     parser.add_argument("--outdir", default="data/vine", help="Directory for VINE inputs.")
     parser.add_argument(
@@ -49,7 +49,10 @@ def parse_args():
         default="KPTracer_meta.csv",
         help="Metadata CSV filename under --datadir. Must contain a Tumor column.",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    if not args.datadir:
+        parser.error("set --datadir or the DEPOSITED_DATA_DIR environment variable")
+    return args
 
 
 def main():

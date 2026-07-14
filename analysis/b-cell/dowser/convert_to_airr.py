@@ -29,10 +29,7 @@ from pathlib import Path
 import pandas as pd
 
 
-DEFAULT_DATA_DIR = Path(
-    "/grid/siepel/home/xing/gene_expression_evolution/SingleCellStochastics/"
-    "b-cell/tribal/tribal_sarscov2_score_example/_covid_data/covid19_data"
-)
+DEFAULT_DATA_DIR = Path(__file__).resolve().parents[1] / "covid19_data"
 
 
 def load_inputs(data_dir: Path):

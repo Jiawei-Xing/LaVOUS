@@ -5,6 +5,7 @@ import argparse
 import re
 import sys
 from collections import Counter
+from pathlib import Path
 
 import matplotlib
 
@@ -18,8 +19,10 @@ from Bio import Phylo
 sys.setrecursionlimit(10000)
 
 DEFAULT_NEXUS = (
-    "/grid/siepel/home/xing/gene_expression_evolution/SingleCellStochastics/"
-    "test_real_data/Yang_KP-Tracer/VINE_new/3724_NT_All_vine_states.nex"
+    Path(__file__).resolve().parents[1]
+    / "data"
+    / "vine"
+    / "3724_NT_All_vine_states.nex"
 )
 
 STATE_RE = re.compile(r"state=([^,\]\s]+)")

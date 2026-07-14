@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEFAULT_WORK_ROOT="/grid/siepel/home/xing/gene_expression_evolution/SingleCellStochastics/b-cell/dowser"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEFAULT_WORK_ROOT="${SCRIPT_DIR}"
 WORK_ROOT="${WORK_ROOT:-${DEFAULT_WORK_ROOT}}"
 cd "${WORK_ROOT}"
 

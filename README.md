@@ -21,7 +21,7 @@ The package implements three analysis workflows:
 3. **History reconstruction**: reconstructs latent expression histories on the
    lineage tree using fitted OU/BM parameters and variational leaf beliefs.
 
-The source package is in `singlecellstochastics/`. 
+The source files are in `source/`.
 
 ## Installation
 
@@ -31,12 +31,11 @@ Install locally from the repository root:
 pip install -e .
 ```
 
-The package currently exposes both descriptive `lavous-*` commands and older
-`run-*` command names for compatibility.
+The installed command-line tools use the `lavous-*` names shown below.
 
 ## Inputs
 
-The main workflows require:
+The workflows use the following inputs as applicable:
 
 - `--tree`: Newick lineage tree. Leaf names must match expression-matrix rows.
 - `--expression`: raw read-count matrix with cells as rows and genes
@@ -45,13 +44,22 @@ The main workflows require:
   `node_name,regime` for named tree nodes, or `node,node2,regime` where a node is
   represented by the MRCA of one or two leaves.
 - `--null`: regime label used as the null/background regime for OU tests.
-- `--library`: optional per-cell library-size factor, ordered or named by cell.
+- `--null_regime`: optional node-to-regime file defining a coarser,
+  multi-theta null model. It uses the same format as `--regime` and is only
+  used by `lavous-diff`.
+- `--library`: optional headerless, two-column TSV containing a cell name and
+  library-size factor on each row.
 
-Multiple trees, count matrices, regime files, and library files can be supplied
-as comma-separated lists. The code aligns cells to tree leaves during
-preprocessing.
+Optionally, the heritability and differential-expression workflows accept matching
+comma-separated file lists for multi-clone analyses. Supply one path per tree
+for each applicable file option, including `--null_regime` when it is used.
+The code aligns cells to tree leaves by name during preprocessing.
 
-## Workflows
+## Quick Start
+
+Run the examples from the repository root after installation. Optionally, create
+a different output directory so the commands can be run in order without
+overwriting the examples.
 
 ### Expression Heritability
 
@@ -77,6 +85,10 @@ lavous-diff \
   --outdir examples/output_results \
   --prefix diff
 ```
+
+By default, `lavous-diff` compares the alternative regime partition against an
+H0 with one shared theta. Pass `--null_regime PATH` to compare it against a
+coarser multi-theta H0 instead.
 
 The differential-expression workflow writes:
 
@@ -123,15 +135,15 @@ lavous-reconstruct \
   --out_fig examples/output_results/history_gene2.png
 ```
 
-The expression input for reconstruction should contain leaf-level variational
-beliefs, such as the wide q-parameter files written by
-`lavous-diff` when `--gene` is supplied. Reconstruction normalizes tree branch
-lengths by default to match the fitted OU/BM model scale; use
+The `--q_params` input for reconstruction should contain leaf-level variational
+beliefs, such as the wide q-parameter files written automatically by
+`lavous-diff`. Reconstruction normalizes tree branch lengths by default to
+match the fitted OU/BM model scale; use
 `--no_normalize_tree` only for parameters fitted on raw branch lengths.
 
-### Stochastic Simulation
+### Stochastic Simulation (Optional)
 
-In addition, to enerate a small simulated read-count matrix from a tree and regime file:
+To generate a small simulated read-count matrix from a tree and regime file:
 
 ```bash
 lavous-simulate \
@@ -165,14 +177,5 @@ This writes simulation `examples/input_data/readcounts_demo.tsv`.
 
 More detailed developer notes are in `docs/source_map.md`.
 
-## Development
-
-Run a syntax/import check from the repository root:
-
-```bash
-python -m compileall singlecellstochastics
-python - <<'PY'
-import singlecellstochastics
-print(singlecellstochastics.__version__)
-PY
-```
+Larger real-data, simulation, and publication-figure workflows are grouped
+under `analysis/`. 

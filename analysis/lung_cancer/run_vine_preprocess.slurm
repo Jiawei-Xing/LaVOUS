@@ -9,10 +9,16 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${SCRIPT_DIR}"
+
 source "$(conda info --base)/etc/profile.d/conda.sh"
 
 PREFIX="${PREFIX:-3724_NT_All}"
-DEPOSITED_DATA_DIR="${DEPOSITED_DATA_DIR:-/grid/siepel/home/xing/gene_expression_evolution/SingleCellStochastics/real_data/Yang_KP-Tracer}"
+if [[ -z "${DEPOSITED_DATA_DIR:-}" ]]; then
+    echo "Set DEPOSITED_DATA_DIR to the external Yang KP-Tracer data directory." >&2
+    exit 2
+fi
 DATA_DIR="${DATA_DIR:-data}"
 VINE_DIR="${VINE_DIR:-${DATA_DIR}/vine}"
 PRIMARY="${PRIMARY:-T1}"
