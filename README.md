@@ -121,7 +121,7 @@ calibration compares simulated and observed `(h0_loss - h1_loss)`.
 
 ### Empirical-Null Calibration
 
-After running the differential-expression test, optionally calibrate p-values from null
+After running the differential-expression test, it is strongly recommended to calibrate p-values from null
 simulations:
 
 ```bash
@@ -131,7 +131,7 @@ lavous-calibrate \
 ```
 
 Use `--sim_each N` for per-gene null simulations. This is much more expensive
-because it refits the LRT to `N` simulated datasets per gene.
+because it refits the LRT to `N` simulated datasets per gene. Running on GPU is recommended.
 
 ### History Reconstruction
 
@@ -195,6 +195,6 @@ under `analysis/`.
 
 
 ## Citation
-The accompanying preprint is available on [bioRxiv](https://www.biorxiv.org/content/10.64898/2026.06.25.734628v1):
+The accompanying preprint is available on [bioRxiv](https://www.biorxiv.org/content/10.64898/2026.06.25.734628v2):
 
 Xing J, Staklinski SJ, Liu Z, Nowak D, Siepel A. Lineage-aware stochastic modeling reveals gene-expression dynamics in development and disease. <i>bioRxiv</i>. doi:10.64898/2026.06.25.734628.
