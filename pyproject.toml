@@ -19,16 +19,18 @@ dependencies = [
     "torch",
     "wandb",
     "joblib",
-    "black",
     "matplotlib",
     "scanpy",
     "anndata",
     "scikit-learn"
 ]
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.10"
 license = {text = "MIT"}
 keywords = ["single-cell", "lineage", "ornstein-uhlenbeck", "brownian-motion", "variational-inference"]
+
+[project.optional-dependencies]
+dev = ["black"]
 
 [project.urls]
 "Homepage" = "https://github.com/Jiawei-Xing/LaVOUS"
