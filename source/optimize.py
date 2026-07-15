@@ -364,10 +364,10 @@ def Lq_optimize_torch_OU(
       (V -> 0 -> singular Cholesky). Defaults to (-5, 5), except when
       fix_alpha=True.
     - log_r_clamp: (lo, hi) tuple for NB dispersion log_r clamp. Applied
-      pre-loop, post-step, and pre-KKT. Defaults to (-5, 10) -> r in
-      [~0.007, ~22026]. Upper end allows near-Poisson regimes for low-noise
-      high-count genes (housekeeping, ribosomal). log_r has no gradient
-      signal in the Poisson limit, so Adam is self-limiting at high r.
+      pre-loop, post-step, and pre-KKT. Defaults to (-5, 7) -> r in
+      [~0.007, ~1097]. The upper end approaches Poisson behavior when the
+      mean is well below r while retaining overdispersion at high counts.
+      log_r has little gradient signal near the Poisson limit.
     - log_s2_clamp: (lo, hi) tuple for variational log-variance clamp.
       Defaults to (-10, 10) -> std in [~0.007, ~148]. Keeps q-variance
       strictly positive and bounded for the MC expectations.
