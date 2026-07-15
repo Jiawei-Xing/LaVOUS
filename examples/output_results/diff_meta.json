@@ -1,7 +1,7 @@
 {
-  "tree": "examples/input_data/tree.nwk",
+  "tree": "examples/input_data/tree_demo.nwk",
   "expression": "examples/input_data/readcounts_demo.tsv",
-  "regime": "examples/input_data/regime.csv",
+  "regime": "examples/input_data/regime_demo.csv",
   "library": null,
   "null": "0",
   "iter": 10000,
