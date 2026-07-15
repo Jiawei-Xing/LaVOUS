@@ -31,7 +31,7 @@ license = {text = "MIT"}
 keywords = ["single-cell", "lineage", "ornstein-uhlenbeck", "brownian-motion", "variational-inference"]
 
 [project.urls]
-"Homepage" = "https://github.com/Jiawei-Xing/SingleCellStochastics"
+"Homepage" = "https://github.com/Jiawei-Xing/LaVOUS"
 
 [project.scripts]
 lavous-heritability = "singlecellstochastics.plasticity:run_plasticity_test"
